@@ -1,0 +1,8 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+datasets/data/
+
+# directories that start with a dot
+.*/
