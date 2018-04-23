@@ -1,7 +1,9 @@
 """Class for algo-fairness framework"""
 from algorithms.Algorithm import Algorithm
+import tensorflow.contrib.eager as tfe
+import numpy as np
 import pandas as pd
-
+import tensorflow as tf
 from algorithms.universalgp.UniversalGPmaster.datasets.definition import Dataset, to_tf_dataset_fn
 import algorithms.universalgp.UniversalGPmaster.universalgp as ugp
 
@@ -11,9 +13,9 @@ class UniversalGPAlgorithm(Algorithm):
     This class calls the UniversalGP code
     """
 
-    name = "UniversalGP"
     def __init__(self):
         Algorithm.__init__(self)
+        self.name = 'UniversalGP'
 
     def run(self, train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
             single_sensitive, privileged_vals, params):
@@ -45,8 +47,8 @@ class UniversalGPAlgorithm(Algorithm):
         train_df_nosensitive = train_df_nosensitive.drop(columns=class_attr)
 
         test_sensitive = test_df[single_sensitive]
-        test_sensitive = pd.DataFrame()
-        test_sensitive = pd.get_dummies(test_sensitive)
+        # test_sensitive = pd.DataFrame()
+        # test_sensitive = pd.get_dummies(test_sensitive)
         test_target = test_df[class_attr]
         test_df_nosensitive = test_df.drop(columns=sensitive_attrs)
         test_df_nosensitive = test_df_nosensitive.drop(columns=class_attr)
@@ -56,8 +58,9 @@ class UniversalGPAlgorithm(Algorithm):
         data_test = (test_df_nosensitive.values, test_sensitive.values.reshape(-1, 1),
                      test_target.values.reshape(-1, 1))
 
+        num_train = data_train[0].shape[0]
         x_size = data_train[0].shape[1]
-        s_size = data_train[1].shape[1]
+        # s_size = data_train[1].shape[1]
         y_size = data_train[2].shape[1]
 
         dataset = Dataset(
@@ -70,14 +73,61 @@ class UniversalGPAlgorithm(Algorithm):
             xtest=data_test[0],
             ytest=data_test[2],
             stest=data_test[1],
+            num_train=num_train,
+            inducing_inputs=data_train[0],
+            output_dim=y_size,
+            lik="LikelihoodLogistic",
+            metric="logistic_accuracy"
         )
-        gp = ugp.train_eager.train_gp(dataset, dict(
-            inf="Variational",
-            cov="SquaredExponential",
-            plot="",
+        use_eager = False
+        if use_eager:
+            try:
+                tfe.enable_eager_execution()
+            except ValueError:
+                pass
+            train_function = ugp.train_eager.train_gp
+        else:
+            tf.logging.set_verbosity(tf.logging.INFO)
+            train_function = ugp.train_graph.train_gp
+        gp = train_function(dataset, dict(
+            inf='Variational',
+            cov='SquaredExponential',
             lr=0.005,
+            loo_steps=None,
+            model_name='local',
+            batch_size=50,
+            train_steps=50,
+            eval_epochs=10000,
+            summary_steps=100,
+            chkpnt_steps=5000,
+            save_dir=None,
+            plot=None,
+            logging_steps=1,
+            gpus='0',
+            save_preds=False,
+            num_components=1,
+            num_samples=100,
+            diag_post=False,
+            optimize_inducing=True,
+            use_loo=False,
+            length_scale=1.0,
+            sf=1.0,
+            iso=False,
+            num_samples_pred=200
         ))
-        return gp.predict(data_test[0])
+        if use_eager:
+            pred_mean, pred_var = gp.predict({'input': data_test[0]})
+            pred_mean = pred_mean.numpy()
+        else:
+            predictions_gen = gp.predict(lambda: to_tf_dataset_fn(data_test[0], data_test[2])().batch(50))
+            pred_mean = []
+            # pred_var = []
+            for prediction in predictions_gen:
+                pred_mean.append(prediction['mean'])
+                # pred_var.append(prediction['var'])
+            pred_mean = np.stack(pred_mean)
+            # pred_var = np.stack(pred_var)
+        return (pred_mean > 0.5).astype(np.float), []
 
     def get_param_info(self):
         """
@@ -88,10 +138,8 @@ class UniversalGPAlgorithm(Algorithm):
         return {}
 
     def get_supported_data_types(self):
-        """
-        Returns a set of datatypes which this algorithm can process.
-        """
-        raise NotImplementedError("get_supported_data_types() in Algorithm is not implemented")
+
+        return set(["numerical-binsensitive"])
 
     def get_name(self):
         """

@@ -4,6 +4,7 @@ import pandas as pd
 
 ##############################################################################
 
+
 class TwoGaussians(Data):
 
     def __init__(self):
@@ -26,10 +27,9 @@ class TwoGaussians(Data):
         sensitive_attr = np.concatenate((sensitive_attr_g1, sensitive_attr_g2))
         # There has to be a better way of dong this.
         decision = [1 if v > 0 else 0 for v in a1 > 0]
+
         return pd.DataFrame(data={
             "decision": decision,
             "sensitive-attr": sensitive_attr,
             "a1": a1
             })
-
-        
