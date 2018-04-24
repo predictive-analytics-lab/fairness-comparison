@@ -1,0 +1,3 @@
+[submodule "algorithms/universalgp/UniversalGPmaster"]
+	path = algorithms/universalgp/UniversalGPmaster
+	url = https://github.com/predictive-analytics-lab/UniversalGP
