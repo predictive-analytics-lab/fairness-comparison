@@ -34,7 +34,7 @@ class SensitiveMetric(Metric):
 
      def expand_per_dataset(self, dataset, sensitive_dict, tag):
           objects_list = []
-          # for sensitive in dataset.get_sensitive_attributes_with_joint():
+          ### for sensitive in dataset.get_sensitive_attributes_with_joint(): this is for joint sensitive attributes
           for sensitive in dataset.get_sensitive_attributes():
                objects_list += self.make_metric_objects(sensitive, sensitive_dict, dataset, tag)
           return objects_list
