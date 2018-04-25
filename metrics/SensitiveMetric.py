@@ -34,7 +34,8 @@ class SensitiveMetric(Metric):
 
      def expand_per_dataset(self, dataset, sensitive_dict, tag):
           objects_list = []
-          for sensitive in dataset.get_sensitive_attributes_with_joint():
+          # for sensitive in dataset.get_sensitive_attributes_with_joint():
+          for sensitive in dataset.get_sensitive_attributes():
                objects_list += self.make_metric_objects(sensitive, sensitive_dict, dataset, tag)
           return objects_list
 
@@ -76,7 +77,8 @@ class SensitiveMetric(Metric):
           return Diff(privileged_metric, unprivileged_metric)
 
      def get_privileged_for_attr(self, sensitive_attr, dataset, tag):
-          sensitive_attributes = dataset.get_sensitive_attributes_with_joint()
+          # sensitive_attributes = dataset.get_sensitive_attributes_with_joint()
+          sensitive_attributes = dataset.get_sensitive_attributes()
           privileged_vals = dataset.get_privileged_class_names_with_joint(tag)
           for sens, priv in zip(sensitive_attributes, privileged_vals):
                if sens == sensitive_attr:

@@ -2,7 +2,8 @@ import pandas as pd
 import numpy
 import numpy.random
 
-TAGS = ["original", "numerical", "numerical-binsensitive", "categorical-binsensitive"]
+# TAGS = ["original", "numerical", "numerical-binsensitive", "categorical-binsensitive"]
+TAGS = ["numerical-binsensitive"]
 TRAINING_PERCENT = 2.0 / 3.0
 
 class ProcessedData():
@@ -49,7 +50,8 @@ class ProcessedData():
         sensitive values that appear.
         """
         df = self.get_dataframe(tag)
-        all_sens = self.data.get_sensitive_attributes_with_joint()
+        # all_sens = self.data.get_sensitive_attributes_with_joint()
+        all_sens = self.data.get_sensitive_attributes()
         sensdict = {}
         for sens in all_sens:
              sensdict[sens] = list(set(df[sens].values.tolist()))
