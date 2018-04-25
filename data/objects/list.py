@@ -8,12 +8,12 @@ from data.objects.TwoGaussians import TwoGaussians
 
 DATASETS = [
     TwoGaussians(),
-    Ricci(),
-    Adult(),
-    German(),
-    PropublicaRecidivism(),
-    PropublicaViolentRecidivism()
-    ]
+    # Ricci(),
+    # Adult(),
+    # German(),
+    # PropublicaRecidivism(),
+    # PropublicaViolentRecidivism()
+]
 
 # For testing, you can just use a sample of the data.  E.g.:
 # DATASETS = [ Sample(Adult(), 50) ]
@@ -24,4 +24,3 @@ def get_dataset_names():
     for dataset in DATASETS:
         names.append(dataset.get_dataset_name())
     return names
-
