@@ -7,11 +7,11 @@ from data.objects.PropublicaViolentRecidivism import PropublicaViolentRecidivism
 from data.objects.TwoGaussians import TwoGaussians
 
 DATASETS = [
-    TwoGaussians(),
+    # TwoGaussians(),
     # Ricci(),
     # Adult(),
     # German(),
-    # PropublicaRecidivism(),
+    PropublicaRecidivism(),
     # PropublicaViolentRecidivism()
 ]
 
