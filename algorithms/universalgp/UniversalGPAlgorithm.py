@@ -8,7 +8,7 @@ from .UniversalGPmaster import universalgp as ugp
 
 USE_EAGER = False
 DO_FAIR = True
-NUM_INDUCING = 100
+MAX_NUM_INDUCING = 500
 
 
 class UniversalGPAlgorithm(Algorithm):
@@ -44,7 +44,6 @@ class UniversalGPAlgorithm(Algorithm):
                 If the implementation of run uses different values, these should be modified in the params
                 dictionary as a way of returning the used values to the caller.
         """
-        assert privileged_vals == [1]
         train_sensitive = train_df[single_sensitive].values[:, np.newaxis]
         train_label = train_df[class_attr].values[:, np.newaxis]
         train_df_nosensitive = train_df.drop(columns=sensitive_attrs).drop(columns=class_attr)
@@ -55,12 +54,14 @@ class UniversalGPAlgorithm(Algorithm):
         test_df_nosensitive = test_df.drop(columns=sensitive_attrs).drop(columns=class_attr)
         test_nosensitive = test_df_nosensitive.values
         num_train = train_nosensitive.shape[0]
+        num_inducing = min(num_train, MAX_NUM_INDUCING)
+        assert list(np.unique(train_sensitive)) == [0, 1] or list(np.unique(train_sensitive)) == [0., 1.]
 
         if params['s_as_input']:
-            inducing_inputs = np.concatenate((train_nosensitive[::num_train // NUM_INDUCING],
-                                              train_sensitive[::num_train // NUM_INDUCING]), -1)
+            inducing_inputs = np.concatenate((train_nosensitive[::num_train // num_inducing],
+                                              train_sensitive[::num_train // num_inducing]), -1)
         else:
-            inducing_inputs = train_nosensitive[::num_train // NUM_INDUCING]
+            inducing_inputs = train_nosensitive[::num_train // num_inducing]
 
         dataset = Dataset(
             train_fn=to_tf_dataset_fn(train_nosensitive, train_label, train_sensitive),
@@ -90,7 +91,6 @@ class UniversalGPAlgorithm(Algorithm):
             train_func = ugp.train_graph.train_gp
 
         biased_acceptance1, biased_acceptance2 = UniversalGPAlgorithm._compute_bias(train_label, train_sensitive)
-        import ipdb; ipdb.set_trace()
 
         gp = train_func(dataset, dict(
             inf='VariationalYbar' if DO_FAIR else 'Variational',
@@ -99,13 +99,13 @@ class UniversalGPAlgorithm(Algorithm):
             loo_steps=None,
             model_name='local',
             batch_size=50,
-            train_steps=500,
+            train_steps=1000,
             eval_epochs=10000,
             summary_steps=5000,
             chkpnt_steps=5000,
             save_dir=None,
             plot=None,
-            logging_steps=10,
+            logging_steps=100,
             gpus='0',
             save_preds=False,
             num_components=1,
@@ -138,7 +138,7 @@ class UniversalGPAlgorithm(Algorithm):
                 # pred_var.append(prediction['var'])
             pred_mean = np.stack(pred_mean)
             # pred_var = np.stack(pred_var)
-        return (pred_mean > 0.5).astype(np.float), []
+        return (pred_mean > 0.5).astype(test_label.dtype), []
 
     @staticmethod
     def _compute_bias(labels, sensitive):
@@ -153,7 +153,7 @@ class UniversalGPAlgorithm(Algorithm):
         function should only be implemented if the algorithm has specific parameters that should be tuned, e.g., for
         trading off between fairness and accuracy.
         """
-        return dict(s_as_input=[True])
+        return dict(s_as_input=[True, False])
 
     @staticmethod
     def get_supported_data_types():
