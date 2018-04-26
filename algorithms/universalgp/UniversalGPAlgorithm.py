@@ -56,6 +56,9 @@ class UniversalGPAlgorithm(Algorithm):
         num_train = train_nosensitive.shape[0]
         num_inducing = min(num_train, MAX_NUM_INDUCING)
         assert list(np.unique(train_sensitive)) == [0, 1] or list(np.unique(train_sensitive)) == [0., 1.]
+        input_norm = UniversalGPAlgorithm._get_normalizer(train_nosensitive)
+        train_nosensitive = input_norm(train_nosensitive)
+        test_nosensitive = input_norm(test_nosensitive)
 
         if params['s_as_input']:
             inducing_inputs = np.concatenate((train_nosensitive[::num_train // num_inducing],
@@ -65,7 +68,7 @@ class UniversalGPAlgorithm(Algorithm):
 
         dataset = Dataset(
             train_fn=to_tf_dataset_fn(train_nosensitive, train_label, train_sensitive),
-            test_fn=to_tf_dataset_fn(test_nosensitive, test_label, test_sensitive),
+            test_fn=to_tf_dataset_fn(test_nosensitive[0:1], test_label[0:1], test_sensitive[0:1]),
             input_dim=train_nosensitive.shape[1] + 1 if params['s_as_input'] else train_nosensitive.shape[1],
             # xtrain=train_nosensitive,
             # ytrain=train_label,
@@ -138,13 +141,24 @@ class UniversalGPAlgorithm(Algorithm):
                 # pred_var.append(prediction['var'])
             pred_mean = np.stack(pred_mean)
             # pred_var = np.stack(pred_var)
-        return (pred_mean > 0.5).astype(test_label.dtype), []
+        return (pred_mean > 0.5).astype(test_label.dtype)[:, 0], []
 
     @staticmethod
     def _compute_bias(labels, sensitive):
         rate_y1_s0 = np.sum(labels[sensitive == 0] == 1) / np.sum(sensitive == 0)
         rate_y1_s1 = np.sum(labels[sensitive == 1] == 1) / np.sum(sensitive == 1)
         return rate_y1_s0, rate_y1_s1
+
+    @staticmethod
+    def _get_normalizer(base):
+        if base.min() == 0 and base.max() > 10:
+            max_per_feature = np.amax(base, axis=0)
+            def normalizer(unnormalized):
+                return unnormalized / max_per_feature
+            return normalizer
+        def do_nothing(inp):
+            return inp
+        return do_nothing
 
     @staticmethod
     def get_param_info():
