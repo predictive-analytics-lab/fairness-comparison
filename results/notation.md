@@ -1,0 +1,18 @@
+
+# Explanations for the columns shown in the csv files
+| Notation                    | Explanation                                                                      | Details                                                                                                 | Range   |
+|-----------------------------|----------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------|---------|
+| TPR                         | True Positive Rate                                                               | p(\hat{y}=1|y=1)                                                                                        | [0, 1]  |
+| TNR                         | True Negative Rate                                                               | p(\hat{y}=0|y=0)                                                                                        | [0, 1]  |
+| BCR                         | Balanced Classification Rate                                                     | [p(\hat{y}=1|y=1) + p(\hat{y}=0|y=0)]/2                                                                 | [0, 1]  |
+| MCC                         | Mattews Correlation Coefficient                                                  | (TP * TN - FP * FN)/sqrt((TP + FP)(TP + TN)(TN + FP)(TN + FN))                                          | [-1, 1] |
+| DIbinary                    | Disparate Impact(all unprivileged classes are grouped as S!=1)                   | p(\hat{y}=1|S!=1)/ p(\hat{y}=1|S=1)                                                                     | >0      |
+| DIavgall                    | Disparate Impact(the average of DI of  S=1 compared to all unprivileged classes) | 1/(number of privileged classes) \sum_{i = privileged classes \ S=1} p(\hat{y}=1|S=i)/ p(\hat{y}=1|S=1) | >0      |
+| CV                          | Similar to DI, but where the difference is taken instead of the ratio            | 1- (p(\hat{y}=1|S=1) - p(\hat{y}=1|S!=1))                                                               | [0, 2]  |
+| 0-[metric]                  | [metric] for binary sensitive 0                                                  | [metric] = accuracy, TPR, TNR, FPR, FNR, calibration+, calibration-                                     |         |
+| 1-[metric]                  | [metric] for binary sensitive 1                                                  | [metric] = accuracy, TPR, TNR, FPR, FNR, calibration+, calibration-                                     |         |
+| S-[metric]                  | For S, (0-[metric] - 1-[metric])/2                                               | S = Race, Sex; [metric] = accuracy, TPR, TNR, FPR, FNR, calibration+, calibration-                      |         |
+| 0-[metric]_over_1-[metric]  | 0-[metric]  divided by 1-[metric] , binary                                       | S = Race, Sex; [metric] = accuracy, TPR, TNR, FPR, FNR, calibration+, calibration-                      |         |
+| Race-[metric]Ratio          | S-[metric]  divided by 1-[metric]                                                | S = Race, Sex; [metric] = accuracy, TPR, TNR, FPR, FNR, calibration+, calibration-                      |         |
+| diff:1-[metric]to0-[metric] | 1 - (1-[metric] - 0-[metric] ), binary                                           | S = Race, Sex; [metric] = accuracy, TPR, TNR, FPR, FNR, calibration+, calibration-                      |         |
+| Race-[metric]Diff           | 1 - (1-[metric] - S-[metric])                                                    | S = Race, Sex; [metric] = accuracy, TPR, TNR, FPR, FNR, calibration+, calibration-                      |         |
