@@ -1,7 +1,7 @@
 # Explanations for the columns shown in the csv files
 | Notation                    | Explanation                                                                      | Details                                                                                                 | Range   |
 |-----------------------------|----------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------|---------|
-| TPR                         | True Positive Rate                                                               | \\p(\hat{y}=1\|y=1)\\)                                                                                      | [0, 1]  |
+| TPR                         | True Positive Rate                                                               | p(\hat{y}=1\|y=1)                                                                                  | [0, 1]  |
 | TNR                         | True Negative Rate                                                               | p(\hat{y}=0\|y=0)                                                                                        | [0, 1]  |
 | BCR                         | Balanced Classification Rate                                                     | [p(\hat{y}=1\|y=1) + p(\hat{y}=0\|y=0)]/2                                                                 | [0, 1]  |
 | MCC                         | Mattews Correlation Coefficient                                                  | (TP * TN - FP * FN)/sqrt((TP + FP)(TP + TN)(TN + FP)(TN + FN))                                          | [-1, 1] |
