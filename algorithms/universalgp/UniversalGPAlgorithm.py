@@ -139,7 +139,7 @@ class UniversalGPAlgorithm(Algorithm):
         function should only be implemented if the algorithm has specific parameters that should be tuned, e.g., for
         trading off between fairness and accuracy.
         """
-        return dict(s_as_input=[True, False])
+        return dict(s_as_input=[False, True])
 
     @staticmethod
     def get_supported_data_types():
@@ -161,7 +161,7 @@ class UniversalGPAlgorithm(Algorithm):
         Returns a dictionary mapping from parameter names to default values that should be used with the algorithm. If
         not implemented by a specific algorithm, this returns the empty dictionary.
         """
-        return dict(s_as_input=True)
+        return dict(s_as_input=False)
 
 
 def _prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_attrs, single_sensitive,
