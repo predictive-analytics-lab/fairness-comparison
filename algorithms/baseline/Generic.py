@@ -24,7 +24,7 @@ class Generic(Algorithm):
         return predictions, []
 
     def get_supported_data_types(self):
-        return set(["numerical", "numerical-binsensitive"])
+        return set(["numerical-binsensitive"])
 
     def get_classifier(self):
         """
