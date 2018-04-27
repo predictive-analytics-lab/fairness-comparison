@@ -50,8 +50,7 @@ class ProcessedData():
         sensitive values that appear.
         """
         df = self.get_dataframe(tag)
-        # all_sens = self.data.get_sensitive_attributes_with_joint() This is for joint sensitive attributes
-        all_sens = self.data.get_sensitive_attributes()
+        all_sens = self.data.get_sensitive_attributes_with_joint()
         sensdict = {}
         for sens in all_sens:
              sensdict[sens] = list(set(df[sens].values.tolist()))
