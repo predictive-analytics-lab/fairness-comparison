@@ -2,9 +2,10 @@
 import numpy as np
 import tensorflow as tf
 
+import universalgp as ugp
+from universalgp.datasets.definition import Dataset, to_tf_dataset_fn
+
 from ..Algorithm import Algorithm
-from .UniversalGPmaster.datasets.definition import Dataset, to_tf_dataset_fn
-from .UniversalGPmaster import universalgp as ugp
 
 USE_EAGER = False
 DO_FAIR = True
