@@ -18,13 +18,14 @@ class UniversalGPAlgorithm(Algorithm):
     """
     This class calls the UniversalGP code
     """
+    name = "UniversalGP"
 
-    def __init__(self):
+    def __init__(self, s_as_input=True):
         Algorithm.__init__(self)
-        self.name = 'UniversalGP'
+        self.counter = 0
+        self.s_as_input = s_as_input
 
-    @staticmethod
-    def run(*data):
+    def run(self, *data):
         """
         Runs the algorithm and returns the predicted classifications on the test set.  The given train and test data
         still contains the sensitive_attrs.  This run of the algorithm should focus on the single given sensitive
@@ -46,11 +47,12 @@ class UniversalGPAlgorithm(Algorithm):
                 If the implementation of run uses different values, these should be modified in the params
                 dictionary as a way of returning the used values to the caller.
         """
+        self.counter += 1
         (train, test), label_converter, params = _prepare_data(*data)
         num_train = train.x.shape[0]
         num_inducing = min(num_train, MAX_NUM_INDUCING)
 
-        if params['s_as_input']:
+        if self.s_as_input:
             inducing_inputs = np.concatenate((train.x[::num_train // num_inducing],
                                               train.s[::num_train // num_inducing]), -1)
         else:
@@ -58,8 +60,8 @@ class UniversalGPAlgorithm(Algorithm):
 
         dataset = Dataset(
             train_fn=to_tf_dataset_fn(train.x, train.y, train.s),
-            test_fn=to_tf_dataset_fn(test.x[0:1], test.y[0:1], test.s[0:1]),
-            input_dim=train.x.shape[1] + 1 if params['s_as_input'] else train.x.shape[1],
+            test_fn=to_tf_dataset_fn(test.x, test.y, test.s),
+            input_dim=train.x.shape[1] + 1 if self.s_as_input else train.x.shape[1],
             # xtrain=train.x,
             # ytrain=train.y,
             # strain=train.s,
@@ -70,7 +72,7 @@ class UniversalGPAlgorithm(Algorithm):
             inducing_inputs=inducing_inputs,
             output_dim=train.y.shape[1],
             lik="LikelihoodLogistic",
-            metric=""
+            metric="logistic_accuracy,pred_rate_y1_s0,pred_rate_y1_s1,base_rate_y1_s0,base_rate_y1_s1",
         )
 
         if USE_EAGER:
@@ -90,13 +92,13 @@ class UniversalGPAlgorithm(Algorithm):
             cov='SquaredExponential',
             lr=0.005,
             loo_steps=None,
-            model_name='local',
+            model_name=f"run{self.counter}_s_as_input_{self.s_as_input}",
             batch_size=50,
             train_steps=1000,
             eval_epochs=10000,
-            summary_steps=5000,
-            chkpnt_steps=5000,
-            save_dir=None,
+            summary_steps=100,
+            chkpnt_steps=100,
+            save_dir=None,  # "/home/ubuntu/out2/",
             plot=None,
             logging_steps=100,
             gpus='0',
@@ -114,7 +116,7 @@ class UniversalGPAlgorithm(Algorithm):
             target_rate2=.5 * (biased_acceptance1 + biased_acceptance2),
             biased_acceptance1=biased_acceptance1,
             biased_acceptance2=biased_acceptance2,
-            s_as_input=params['s_as_input'],
+            s_as_input=self.s_as_input,
             probs_from_flipped=False,
         ))
 
@@ -155,13 +157,12 @@ class UniversalGPAlgorithm(Algorithm):
         """
         return self.name
 
-    @staticmethod
-    def get_default_params():
+    def get_default_params(self):
         """
         Returns a dictionary mapping from parameter names to default values that should be used with the algorithm. If
         not implemented by a specific algorithm, this returns the empty dictionary.
         """
-        return dict(s_as_input=True)
+        return dict(s_as_input=self.s_as_input)
 
 
 def _prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_attrs, single_sensitive,

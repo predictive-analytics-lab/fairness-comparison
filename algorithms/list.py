@@ -13,9 +13,9 @@ from metrics.DIAvgAll import DIAvgAll
 from metrics.Accuracy import Accuracy
 from metrics.MCC import MCC
 
-ALGORITHMS = [CaldersAlgorithm(), UniversalGPAlgorithm()]
+ALGORITHMS = [CaldersAlgorithm(), UniversalGPAlgorithm(s_as_input=True)]
 
-# ALGORITHMS = [UniversalGPAlgorithm()]     # baseline
+# ALGORITHMS = [UniversalGPAlgorithm(s_as_input=True)]     # baseline
 #              SVM(),
 #              GaussianNB(),
 #              LogisticRegression(),
