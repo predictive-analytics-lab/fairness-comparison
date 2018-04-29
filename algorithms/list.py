@@ -13,7 +13,7 @@ from metrics.DIAvgAll import DIAvgAll
 from metrics.Accuracy import Accuracy
 from metrics.MCC import MCC
 
-ALGORITHMS = [UniversalGPAlgorithm()]     # baseline
+ALGORITHMS = [UniversalGPAlgorithm(s_as_input=True), UniversalGPAlgorithm(s_as_input=False)]     # baseline
 #              SVM(),
 #              GaussianNB(),
 #              LogisticRegression(),

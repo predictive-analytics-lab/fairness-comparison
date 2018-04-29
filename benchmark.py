@@ -10,7 +10,7 @@ from metrics.list import get_metrics
 
 from algorithms.ParamGridSearch import ParamGridSearch
 
-NUM_TRIALS_DEFAULT = 10
+NUM_TRIALS_DEFAULT = 2
 
 
 def get_algorithm_names():
