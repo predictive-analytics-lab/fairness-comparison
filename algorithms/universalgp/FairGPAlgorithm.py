@@ -14,11 +14,11 @@ DO_FAIR = True
 MAX_NUM_INDUCING = 500
 
 
-class UniversalGPAlgorithm(Algorithm):
+class FairGPAlgorithm(Algorithm):
     """
     This class calls the UniversalGP code
     """
-    name = "UniversalGP"
+    name = "FairGP"
 
     def __init__(self, s_as_input=True):
         Algorithm.__init__(self)

@@ -12,20 +12,21 @@ from data.objects.ProcessedData import TAGS
 # The graphs to generate: (xaxis measure, yaxis measure)
 GRAPHS = [('DIbinary', 'accuracy'), ('sex-TPR', 'sex-calibration-')]
 
+
 def run(dataset = get_dataset_names(), graphs = GRAPHS):
     for dataset_obj in DATASETS:
         if not dataset_obj.get_dataset_name() in dataset:
             continue
 
         print("\nGenerating graphs for dataset:" + dataset_obj.get_dataset_name())
-        for sensitive in dataset_obj.get_sensitive_attributes_with_joint():
+        for sensitive in dataset_obj.get_sensitive_attributes():
             for tag in TAGS:
                 print("    type:" + tag)
                 filename = dataset_obj.get_results_filename(sensitive, tag)
                 make_all_graphs(filename, graphs)
     print("Generating additional figures in R...")
-    subprocess.run(["Rscript",
-                    "results/generate-report.R"])
+    subprocess.run(["Rscript", "results/generate-report.R"])
+
 
 def make_all_graphs(filename, graphs):
     try:
@@ -42,13 +43,15 @@ def make_all_graphs(filename, graphs):
         for xaxis, yaxis in graphs:
             generate_graph(f, xaxis, yaxis, o)
 
+
 def all_possible_graphs(f):
     graphs = []
     measures = list(f.columns.values)[2:]
     for i, m1 in enumerate(measures):
         for j, m2 in enumerate(measures):
-             graphs.append( (m1, m2) )
+             graphs.append((m1, m2))
     return graphs
+
 
 def generate_graph(f, xaxis_measure, yaxis_measure, title):
     try:
@@ -89,12 +92,14 @@ def generate_graph(f, xaxis_measure, yaxis_measure, title):
                width=20,
                height=6)
 
+
 def generate_rmd_output():
-    subprocess.run(["Rscript",
-                    "results/generate-report.R"])
+    subprocess.run(["Rscript", "results/generate-report.R"])
+
 
 def main():
     fire.Fire(run)
+
 
 if __name__ == '__main__':
     main()

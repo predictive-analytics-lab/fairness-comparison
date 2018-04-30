@@ -7,21 +7,28 @@ from algorithms.baseline.DecisionTree import DecisionTree
 from algorithms.baseline.GaussianNB import GaussianNB
 from algorithms.baseline.LogisticRegression import LogisticRegression
 from algorithms.ParamGridSearch import ParamGridSearch
-from algorithms.universalgp.UniversalGPAlgorithm import UniversalGPAlgorithm
+from algorithms.universalgp.FairGPAlgorithm import FairGPAlgorithm
 
 from metrics.DIAvgAll import DIAvgAll
 from metrics.Accuracy import Accuracy
 from metrics.MCC import MCC
 
-ALGORITHMS = [CaldersAlgorithm(), UniversalGPAlgorithm(s_as_input=True)]
+ALGORITHMS = [FairGPAlgorithm(s_as_input=True),
+              SVM(),
+              GaussianNB(),
+              LogisticRegression(),
+              DecisionTree(),
+              CaldersAlgorithm(),
+              KamishimaAlgorithm(),
+              FeldmanAlgorithm(SVM()), FeldmanAlgorithm(GaussianNB()),       # Feldman
+              FeldmanAlgorithm(LogisticRegression()), FeldmanAlgorithm(DecisionTree()),
+              ZafarAlgorithmFairness(),
+              ZafarAlgorithmAccuracy()]
 
 # ALGORITHMS = [UniversalGPAlgorithm(s_as_input=True)]     # baseline
-#              SVM(),
-#              GaussianNB(),
-#              LogisticRegression(),
-#              DecisionTree(),
 
-#   KamishimaAlgorithm(),                                          # Kamishima
+
+#    KamishimaAlgorithm(),                                        # Kamishima
 #    CaldersAlgorithm(),                                            # Calders
 #    ZafarAlgorithmBaseline(),                                      # Zafar
 #    ZafarAlgorithmFairness(),
