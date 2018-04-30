@@ -1,7 +1,7 @@
 ---
-title: "KDD 2017 analysis"
-author: "cscheid"
-date: "2/9/2018"
+title: "Fairness analysis"
+author: "magica"
+date: "29/04/2018"
 output: html_document
 ---
 
@@ -14,6 +14,7 @@ library(dplyr)
 library(magrittr)
 library(corrplot)
 library(robust)
+library(ggpubr)
 ```
 
 We'll be showing many different charts with a large number of different attributes, so a good
@@ -42,7 +43,7 @@ create_sensitivity_summary = function(df, x_var, y_var) {
   #y_mean_name = paste0("mean_", quo_name(quo_y_var))
   #x_sd_name = paste0("sd_", quo_name(quo_x_var))
   #y_sd_name = paste0("sd_", quo_name(quo_y_var))
-
+  
   sensitivity_summary = 
     df %>% 
     group_by(algorithm) %>% 
@@ -72,15 +73,15 @@ plot_ellipses_sensitity_summary = function(basic_plot) {
 
 plot_rects_sensitivity_summary = function(basic_plot) {
   aesthetics1 = aes(xmin = x_mean - 0.5 * x_sd,   
-                   xmax = x_mean + 0.5 * x_sd,
-                   ymin = y_mean - 0.5 * y_sd, 
-                   ymax = y_mean + 0.5 * y_sd,
-                   fill=algorithm)
+                    xmax = x_mean + 0.5 * x_sd,
+                    ymin = y_mean - 0.5 * y_sd, 
+                    ymax = y_mean + 0.5 * y_sd,
+                    fill=algorithm)
   aesthetics2 = aes(xmin = x_mean - 0.5 * x_sd,   
-                   xmax = x_mean + 0.5 * x_sd,
-                   ymin = y_mean - 0.5 * y_sd, 
-                   ymax = y_mean + 0.5 * y_sd,
-                   colour=algorithm)
+                    xmax = x_mean + 0.5 * x_sd,
+                    ymin = y_mean - 0.5 * y_sd, 
+                    ymax = y_mean + 0.5 * y_sd,
+                    colour=algorithm)
   basic_plot +
     geom_rect(aesthetics1, alpha=0.15) +
     geom_rect(aesthetics2, fill=NA)
@@ -91,9 +92,9 @@ do_it_all = function(name, var1, var2, check.names=FALSE) {
   
   x_var = as.name(var1)
   y_var = as.name(var2)
-
+  
   sensitivity_summary = create_sensitivity_summary(df, !!x_var, !!y_var)
-
+  
   basic_plot = basic_sensitivity_plot(sensitivity_summary, !!x_var, !!y_var) + ggtitle(name)
   
   plot_rects_sensitivity_summary(basic_plot)
@@ -111,39 +112,127 @@ nb_measure_comparison = function(name, measure) {
   df
   # return (df %>% select(!!var1, !!var2, "run-id", "algorithm", "name"))
 }
+
+algos_to_plot = c(
+  "ZafarFairness", "Calders", "SVM", 
+  "Feldman-SVM", "DecisionTree", 
+  "Feldman-DecisionTree", "Kamishima","UniversalGP")
+
 ```
 
+```{r}
 # Preliminaries
 
 # Paper figures
 
 ## Preprocessing tradeoffs
+# plot_tradeoff = function(measure, dataset) {
+#   df = nb_measure_comparison(dataset, measure)
+#   var1 <- as.name(str_c(measure, "-numerical"))
+#   var2 <- as.name(str_c(measure, "-binsensitive"))
+#   ggplot(df %>% filter(!(algorithm %in% c("LR", "SVM", "GaussianNB"))), aes_q(x=var1, y=var2, colour=quote(algorithm))) + catscale10 + catscale10_2 + geom_abline(a=0,b=1, colour="gray") +
+#     geom_point() + ggtitle(str_c(dataset, ", measure: ", measure)) 
+# }
+
+# # measure = "accuracy"
+# p = plot_tradeoff("accuracy", "german_sex-age")
+# print(p)
+# ggsave("paper-figures/preprocessing-tradeoff-accuracy.png", p)
+# 
+# p = plot_tradeoff("DIavgall", "german_sex-age")
+# print(p)
+# ggsave("paper-figures/preprocessing-tradeoff-DIavgall.png", p)
+# 
+# p = plot_tradeoff("DIbinary", "german_sex-age")
+# print(p)
+# ggsave("paper-figures/preprocessing-tradeoff-DIbinary.png", p)
+# ```
+# ```{r}
+# p = plot_tradeoff("DIbinary", "german_sex-age")
+# print(p)
+```
+
+## Algorithm accuracy vs fairness
 
 ```{r}
-plot_tradeoff = function(measure, dataset) {
-  df = nb_measure_comparison(dataset, measure)
-  var1 <- as.name(str_c(measure, "-numerical"))
-  var2 <- as.name(str_c(measure, "-binsensitive"))
-  ggplot(df %>% filter(!(algorithm %in% c("LR", "SVM", "GaussianNB"))), aes_q(x=var1, y=var2, colour=quote(algorithm))) + catscale10 + catscale10_2 + geom_abline(a=0,b=1, colour="gray") +
-    geom_point() + ggtitle(str_c(dataset, ", measure: ", measure)) 
+make_scatter_figure = function(name, var1="CV", var2="accuracy", display=0) {
+  x_var = as.name(var1)
+  y_var = as.name(var2)
+  
+  df = read.csv(str_c(name, "_numerical-binsensitive.csv"), check.names=TRUE) %>% 
+    filter(algorithm %in% algos_to_plot) %>% 
+    mutate(algorithm=recode(algorithm, ZafarFairness="Zafar")) # rename to Zafar for clarity
+  
+  # Scatterplot
+  if(display==0){
+    ggplot(df, aes_q(x=x_var, y=y_var, colour=quote(algorithm))) + geom_point() + 
+      labs(y=var2, x=var1, title=name)
+  } else {
+    ggplot(df, aes_q(x=x_var, y=y_var, colour=quote(algorithm))) + geom_point() + 
+      labs(y=var2, x=var1, caption = str_c(name, "_numerical-binsensitive.csv"))
+  }
 }
 
-# measure = "accuracy"
-p = plot_tradeoff("accuracy", "german_sex-age")
-print(p)
-ggsave("paper-figures/preprocessing-tradeoff-accuracy.png", p)
+q_CV = make_scatter_figure("adult_race", var1="CV", var2="accuracy", display = 0)
+q_DI = make_scatter_figure("adult_race", var1="DIbinary", var2="accuracy", display = 1)
+q = ggarrange(q_CV, q_DI, ncol=1, nrow=2, common.legend = TRUE, legend="right")
+print(q)
+ggsave("AWS-result/adult_race_fair.png", q)
 
-p = plot_tradeoff("DIavgall", "german_sex-age")
-print(p)
-ggsave("paper-figures/preprocessing-tradeoff-DIavgall.png", p)
+q_CV = make_scatter_figure("adult_sex", var1="CV", var2="accuracy", display = 0)
+q_DI = make_scatter_figure("adult_sex", var1="DIbinary", var2="accuracy", display = 1)
+q = ggarrange(q_CV, q_DI, ncol=1, nrow=2, common.legend = TRUE, legend="right")
+print(q)
+ggsave("AWS-result/adult_sex_fair.png", q)
 
-p = plot_tradeoff("DIbinary", "german_sex-age")
-print(p)
-ggsave("paper-figures/preprocessing-tradeoff-DIbinary.png", p)
-```
-```{r}
-p = plot_tradeoff("DIbinary", "german_sex-age")
-print(p)
+q_CV = make_scatter_figure("german_age", var1="CV", var2="accuracy", display = 0)
+q_DI = make_scatter_figure("german_age", var1="DIbinary", var2="accuracy", display = 1)
+q = ggarrange(q_CV, q_DI, ncol=1, nrow=2, common.legend = TRUE, legend="right")
+print(q)
+ggsave("AWS-result/german_age_fair.png", q)
+
+q_CV = make_scatter_figure("german_sex", var1="CV", var2="accuracy", display = 0)
+q_DI = make_scatter_figure("german_sex", var1="DIbinary", var2="accuracy", display = 1)
+q = ggarrange(q_CV, q_DI, ncol=1, nrow=2, common.legend = TRUE, legend="right")
+print(q)
+ggsave("AWS-result/german_sex_fair.png", q)
+
+q_CV = make_scatter_figure("propublica-recidivism_race", var1="CV", var2="accuracy", display = 0)
+q_DI = make_scatter_figure("propublica-recidivism_race", var1="DIbinary", var2="accuracy", display = 1)
+q = ggarrange(q_CV, q_DI, ncol=1, nrow=2, common.legend = TRUE, legend="right")
+print(q)
+ggsave("AWS-result/propublica-recidivism_race_fair.png", q)
+
+q_CV = make_scatter_figure("propublica-recidivism_sex", var1="CV", var2="accuracy", display = 0)
+q_DI = make_scatter_figure("propublica-recidivism_sex", var1="DIbinary", var2="accuracy", display = 1)
+q = ggarrange(q_CV, q_DI, ncol=1, nrow=2, common.legend = TRUE, legend="right")
+print(q)
+ggsave("AWS-result/propublica-recidivism_sex_fair.png", q)
+
+q_CV = make_scatter_figure("propublica-violent-recidivism_race", var1="CV", var2="accuracy", display = 0)
+q_DI = make_scatter_figure("propublica-violent-recidivism_race", var1="DIbinary", var2="accuracy", display = 1)
+q = ggarrange(q_CV, q_DI, ncol=1, nrow=2, common.legend = TRUE, legend="right")
+print(q)
+ggsave("AWS-result/propublica-violent-recidivism_race_fair.png", q)
+
+q_CV = make_scatter_figure("propublica-violent-recidivism_sex", var1="CV", var2="accuracy", display = 0)
+q_DI = make_scatter_figure("propublica-violent-recidivism_sex", var1="DIbinary", var2="accuracy", display = 1)
+q = ggarrange(q_CV, q_DI, ncol=1, nrow=2, common.legend = TRUE, legend="right")
+print(q)
+ggsave("AWS-result/propublica-violent-recidivism_sex_fair.png", q)
+
+q_CV = make_scatter_figure("ricci_Race", var1="CV", var2="accuracy", display = 0)
+q_DI = make_scatter_figure("ricci_Race", var1="DIbinary", var2="accuracy", display = 1)
+q = ggarrange(q_CV, q_DI, ncol=1, nrow=2, common.legend = TRUE, legend="right")
+print(q)
+ggsave("AWS-result/ricci_fair.png", q)
+
+q_CV = make_scatter_figure("two-gaussians_sensitive-attr", var1="CV", var2="accuracy", display = 0)
+q_DI = make_scatter_figure("two-gaussians_sensitive-attr", var1="DIbinary", var2="accuracy", display = 1)
+q = ggarrange(q_CV, q_DI, ncol=1, nrow=2, common.legend = TRUE, legend="right")
+print(q)
+ggsave("AWS-result/two-gaussians_sensitive-attr_fair.png", q)
+
 ```
 
 ## Algorithm sensitivity
@@ -152,16 +241,11 @@ print(p)
 plot_sensitivity = function(df, var1, var2) {
   x_var = as.name(var1)
   y_var = as.name(var2)
-
+  
   sensitivity_summary = create_sensitivity_summary(df, !!x_var, !!y_var)
   basic_plot = basic_sensitivity_plot(sensitivity_summary, !!x_var, !!y_var)
   plot_rects_sensitivity_summary(basic_plot)
 }
-
-algos_to_plot = c(
-  "ZafarFairness", "Calders", "SVM", 
-  "Feldman-SVM", "DecisionTree", 
-  "Feldman-DecisionTree", "Kamishima")
 
 make_sensitivity_figure = function(name, var1="DIbinary", var2="accuracy") {
   df = read.csv(name, check.names=TRUE) %>% 
@@ -174,87 +258,122 @@ make_sensitivity_figure = function(name, var1="DIbinary", var2="accuracy") {
 p = make_sensitivity_figure("adult_sex_numerical-binsensitive.csv") +
   ggtitle("Adult dataset, sex attribute")
 print(p)
-ggsave("paper-figures/adult_sex_sensitivity.png", p)
+ggsave("AWS-result/adult_sex_sensitivity.png", p)
 
 p = make_sensitivity_figure("adult_race_numerical-binsensitive.csv") +
   ggtitle("Adult dataset, race attribute")
 print(p)
-ggsave("paper-figures/adult_race_sensitivity.png", p)
+ggsave("AWS-result/adult_race_sensitivity.png", p)
 
-p = make_sensitivity_figure("adult_race-sex_numerical-binsensitive.csv") +
-  ggtitle("Adult dataset, sex+race combined attribute")
+p = make_sensitivity_figure("german_age_numerical-binsensitive.csv") +
+  ggtitle("German dataset, age attribute")
 print(p)
-ggsave("paper-figures/adult_race-sex_sensitivity.png", p)
+ggsave("AWS-result/german_age_sensitivity.png", p)
+
+p = make_sensitivity_figure("german_sex_numerical-binsensitive.csv") +
+  ggtitle("German dataset, sex attribute")
+print(p)
+ggsave("AWS-result/german_sex_sensitivity.png", p)
+
+p = make_sensitivity_figure("propublica-recidivism_race_numerical-binsensitive.csv") +
+  ggtitle("Propublica-recidivism dataset, race attribute")
+print(p)
+ggsave("AWS-result/propublica-recidivism_race_sensitivity.png", p)
+
+p = make_sensitivity_figure("propublica-recidivism_sex_numerical-binsensitive.csv") +
+  ggtitle("Propublica-recidivism dataset, sex attribute")
+print(p)
+ggsave("AWS-result/propublica-recidivism_sex_sensitivity.png", p)
+
+p = make_sensitivity_figure("propublica-violent-recidivism_race_numerical-binsensitive.csv") +
+  ggtitle("Propublica-violent-recidivism dataset, race attribute")
+print(p)
+ggsave("AWS-result/propublica-violent-recidivism_race_sensitivity.png", p)
+
+p = make_sensitivity_figure("propublica-violent-recidivism_sex_numerical-binsensitive.csv") +
+  ggtitle("Propublica-violent-recidivism dataset, sex attribute")
+print(p)
+ggsave("AWS-result/propublica-violent-recidivism_sex_sensitivity.png", p)
+
+p = make_sensitivity_figure("ricci_Race_numerical-binsensitive.csv") +
+  ggtitle("Ricci dataset, race attribute")
+print(p)
+ggsave("AWS-result/ricci_Race_sensitivity.png", p)
+
+p = make_sensitivity_figure("two-gaussians_sensitive-attr_numerical-binsensitive.csv") +
+  ggtitle("Two-gaussians_sensitive-attr dataset, sensitive attribute")
+print(p)
+ggsave("AWS-result/two-gaussians_sensitive-attr_sensitivity.png", p)
 
 ```
 
 ```{r}
-p = make_sensitivity_figure("propublica-violent-recidivism_race_numerical-binsensitive.csv", "DIavgall") +
-  ggtitle("Propublica violent recidivism dataset, race attribute")
-print(p)
+# p = make_sensitivity_figure("propublica-violent-recidivism_race_numerical-binsensitive.csv", "DIavgall") +
+#   ggtitle("Propublica violent recidivism dataset, race attribute")
+# print(p)
 ```
 
-### Parameter setting tradeoffs
+<!-- ### Parameter setting tradeoffs -->
 
-Algorithms can state what their parameter grid search values are, since these can provide significantly different results:
+<!-- Algorithms can state what their parameter grid search values are, since these can provide significantly different results: -->
 
-```{r}
-param_regex = "[01].[0-9]+"
+<!-- ```{r} -->
+<!-- param_regex = "[01].[0-9]+" -->
 
-adult_race_params = read.csv("paramgrid-results/Feldman-SVM-DIavgall_adult_race_numerical-binsensitive.csv", stringsAsFactors = FALSE, check.names=TRUE) %>% 
-    mutate(lambda=as.numeric(str_extract(params, param_regex)))
-p = ggplot(adult_race_params, aes(x=DIavgall, y=accuracy, colour=lambda)) + geom_point() + ggtitle("Adult dataset, race attribute")
-print(p)
-ggsave("paper-figures/adult_race_params_feldman.png", p)
-```
+<!-- adult_race_params = read.csv("paramgrid-results/Feldman-SVM-DIavgall_adult_race_numerical-binsensitive.csv", stringsAsFactors = FALSE, check.names=TRUE) %>%  -->
+<!--     mutate(lambda=as.numeric(str_extract(params, param_regex))) -->
+<!-- p = ggplot(adult_race_params, aes(x=DIavgall, y=accuracy, colour=lambda)) + geom_point() + ggtitle("Adult dataset, race attribute") -->
+<!-- print(p) -->
+<!-- ggsave("paper-figures/adult_race_params_feldman.png", p) -->
+<!-- ``` -->
 
-```{r}
-ricci_race_params = read.csv("paramgrid-results/ZafarFairness-DIavgall_ricci_Race_numerical-binsensitive.csv", stringsAsFactors = FALSE, check.names=FALSE) %>% 
-  mutate(c=as.numeric(str_extract(params, param_regex))) %>% 
-  filter(c>=0.01) # skip low range of parameter setting to avoid overweighting the correlation matrices
-# ggplot(ricci_race_params, aes(x=DIavgall, y=`Race-calibration-`, colour=c)) + geom_point()
-#adult_race_params = read.csv("ZafarFairness-DIavgall_adult_race_numerical-binsensitive.csv", #stringsAsFactors = FALSE, check.names=TRUE) %>% 
-#  mutate(c=as.numeric(str_extract(params, param_regex))) %>% 
-#  filter(c>=0.01) # skip low range of parameter setting to avoid overweighting the correlation matrices
+<!-- ```{r} -->
+<!-- ricci_race_params = read.csv("paramgrid-results/ZafarFairness-DIavgall_ricci_Race_numerical-binsensitive.csv", stringsAsFactors = FALSE, check.names=FALSE) %>%  -->
+<!--   mutate(c=as.numeric(str_extract(params, param_regex))) %>%  -->
+<!--   filter(c>=0.01) # skip low range of parameter setting to avoid overweighting the correlation matrices -->
+<!-- # ggplot(ricci_race_params, aes(x=DIavgall, y=`Race-calibration-`, colour=c)) + geom_point() -->
+<!-- #adult_race_params = read.csv("ZafarFairness-DIavgall_adult_race_numerical-binsensitive.csv", #stringsAsFactors = FALSE, check.names=TRUE) %>%  -->
+<!-- #  mutate(c=as.numeric(str_extract(params, param_regex))) %>%  -->
+<!-- #  filter(c>=0.01) # skip low range of parameter setting to avoid overweighting the correlation matrices -->
 
-p = ggplot(ricci_race_params, aes(x=DIavgall, y=accuracy, colour=c)) + geom_point() + ggtitle("Ricci dataset, Race attribute")
-print(p)
-ggsave("paper-figures/ricci_race_params_zafar.png", p)
-```
+<!-- p = ggplot(ricci_race_params, aes(x=DIavgall, y=accuracy, colour=c)) + geom_point() + ggtitle("Ricci dataset, Race attribute") -->
+<!-- print(p) -->
+<!-- ggsave("paper-figures/ricci_race_params_zafar.png", p) -->
+<!-- ``` -->
 
-### Proliferation of measures
+<!-- ### Proliferation of measures -->
 
-```{r}
-compute_measure_correlation_matrix = function(df, measures) {
-  m = matrix(0, nrow=length(measures), ncol=length(measures))
-  # colnames(m) = measures
-  rownames(m) = measures
-  for (i in 1:length(measures)) {
-    for (j in 1:length(measures)) {
-      x = df[[measures[[i]]]]
-      y = df[[measures[[j]]]]
-      if (sd(x) < 0.0001 || sd(y) < 0.0001) {
-        m[i,j] = 0.0 # kludge
-      } else {
-        # some metrics have large outliers, which hoses a naive correlation calculation.
-        # we'll use a robust correlation routine
-        # we perturb the points minimally because otherwise robust:covRob crashes..
-        tdf <- data.frame(x=x+rnorm(length(x))*0.001, 
-                          y=y+rnorm(length(x))*0.001)
-        if (cor(x, y) > 0.9999) {
-          m[i, j] = cor(x, y)
-        } else {
-          r = covRob(tdf, corr=TRUE)
-          # I could probably do all of this at once, but I don't want to deal with constant
-          # columns _and_ robust calculations at once
-          m[i,j] = r$cov[[1,2]]
-        }
-      }
-    }
-  }
-  m
-}
-```
+<!-- ```{r} -->
+<!-- compute_measure_correlation_matrix = function(df, measures) { -->
+<!--   m = matrix(0, nrow=length(measures), ncol=length(measures)) -->
+<!--   # colnames(m) = measures -->
+<!--   rownames(m) = measures -->
+<!--   for (i in 1:length(measures)) { -->
+<!--     for (j in 1:length(measures)) { -->
+<!--       x = df[[measures[[i]]]] -->
+<!--       y = df[[measures[[j]]]] -->
+<!--       if (sd(x) < 0.0001 || sd(y) < 0.0001) { -->
+<!--         m[i,j] = 0.0 # kludge -->
+<!--       } else { -->
+<!--         # some metrics have large outliers, which hoses a naive correlation calculation. -->
+<!--         # we'll use a robust correlation routine -->
+<!--         # we perturb the points minimally because otherwise robust:covRob crashes.. -->
+<!--         tdf <- data.frame(x=x+rnorm(length(x))*0.001,  -->
+<!--                           y=y+rnorm(length(x))*0.001) -->
+<!--         if (cor(x, y) > 0.9999) { -->
+<!--           m[i, j] = cor(x, y) -->
+<!--         } else { -->
+<!--           r = covRob(tdf, corr=TRUE) -->
+<!--           # I could probably do all of this at once, but I don't want to deal with constant -->
+<!--           # columns _and_ robust calculations at once -->
+<!--           m[i,j] = r$cov[[1,2]] -->
+<!--         } -->
+<!--       } -->
+<!--     } -->
+<!--   } -->
+<!--   m -->
+<!-- } -->
+<!-- ``` -->
 
 For Ricci and Zafar:
 
@@ -292,9 +411,9 @@ For Adult and Feldman-SVM:
 # adult_m = compute_measure_correlation_matrix(
 #   adult_race_params, 
 #   c("X1.accuracy", "TPR", "race.TPR", "TNR", "X0.accuracy", "race.TNR", "race.calibration.", "BCR", "MCC", "accuracy", "race.accuracy", "race.calibration..1", "CV", "DIbinary", "DIavgall"))
-  #c(consistent_measures[1:3], "race.calibration..1", 
-  #  consistent_measures[-(1:3)], "race.accuracy", "X0.accuracy", "X1.accuracy", "race.calibration.",
-  #  "race.TPR", "race.TNR"))
+#c(consistent_measures[1:3], "race.calibration..1", 
+#  consistent_measures[-(1:3)], "race.accuracy", "X0.accuracy", "X1.accuracy", "race.calibration.",
+#  "race.TPR", "race.TNR"))
 
 # BUG: I'm having a hard time making RMarkDown save this to a file :( type this in your
 # console instead...
@@ -302,54 +421,54 @@ For Adult and Feldman-SVM:
 # corrplot(adult_m, method="color", order="original")
 ```
 
-# Multiple sensitive attributes
+<!-- # Multiple sensitive attributes -->
 
-```{r}
-race = read.csv("adult_race_numerical.csv")
-sex = read.csv("adult_sex_numerical.csv")
-both = read.csv("adult_race-sex_numerical.csv")
-race$repair = "race"
-sex$repair = "sex"
-both$repair = "both"
+<!-- ```{r} -->
+<!-- race = read.csv("adult_race_numerical.csv") -->
+<!-- sex = read.csv("adult_sex_numerical.csv") -->
+<!-- both = read.csv("adult_race-sex_numerical.csv") -->
+<!-- race$repair = "race" -->
+<!-- sex$repair = "sex" -->
+<!-- both$repair = "both" -->
 
-df = rbind(race, sex, both) %>% 
-  filter(algorithm %in% c("ZafarFairness", "Calders", "Kamishima", "Feldman-GaussianNB"))
-df$repair <- factor(df$repair, levels = c("race", "sex", "both"))
-p = ggplot(df, aes(x=DIavgall, y=accuracy, colour=repair)) + catscale10 + catscale10_2 + stat_ellipse(geom="polygon", level=0.5, alpha=0.1) + geom_point(alpha=0.3) + ggtitle("Adult dataset") + facet_wrap(~algorithm)
-print(p)
-ggsave("paper-figures/adult-multivariate-repair-tradeoff.png", p)
-```
+<!-- df = rbind(race, sex, both) %>%  -->
+<!--   filter(algorithm %in% c("ZafarFairness", "Calders", "Kamishima", "Feldman-GaussianNB")) -->
+<!-- df$repair <- factor(df$repair, levels = c("race", "sex", "both")) -->
+<!-- p = ggplot(df, aes(x=DIavgall, y=accuracy, colour=repair)) + catscale10 + catscale10_2 + stat_ellipse(geom="polygon", level=0.5, alpha=0.1) + geom_point(alpha=0.3) + ggtitle("Adult dataset") + facet_wrap(~algorithm) -->
+<!-- print(p) -->
+<!-- ggsave("paper-figures/adult-multivariate-repair-tradeoff.png", p) -->
+<!-- ``` -->
 
-```{r}
-age = read.csv("german_age_numerical.csv")
-sex = read.csv("german_sex_numerical.csv")
-both = read.csv("german_sex-age_numerical.csv")
-age$repair = "age"
-sex$repair = "sex"
-both$repair = "both"
+<!-- ```{r} -->
+<!-- age = read.csv("german_age_numerical.csv") -->
+<!-- sex = read.csv("german_sex_numerical.csv") -->
+<!-- both = read.csv("german_sex-age_numerical.csv") -->
+<!-- age$repair = "age" -->
+<!-- sex$repair = "sex" -->
+<!-- both$repair = "both" -->
 
-df = rbind(age, sex, both) %>% 
-  filter(algorithm %in% c("ZafarFairness", "Calders", "Kamishima", "Feldman-SVM"))
-df$repair <- factor(df$repair, levels = c("age", "sex", "both"))
+<!-- df = rbind(age, sex, both) %>%  -->
+<!--   filter(algorithm %in% c("ZafarFairness", "Calders", "Kamishima", "Feldman-SVM")) -->
+<!-- df$repair <- factor(df$repair, levels = c("age", "sex", "both")) -->
 
-p = ggplot(df, aes(x=DIavgall, y=accuracy, colour=repair)) + catscale10 + catscale10_2 + stat_ellipse(geom="polygon", level=0.5, alpha=0.1) + geom_point(alpha=0.3) + ggtitle("German dataset") + facet_wrap(~algorithm)
+<!-- p = ggplot(df, aes(x=DIavgall, y=accuracy, colour=repair)) + catscale10 + catscale10_2 + stat_ellipse(geom="polygon", level=0.5, alpha=0.1) + geom_point(alpha=0.3) + ggtitle("German dataset") + facet_wrap(~algorithm) -->
 
-print(p)
-ggsave("paper-figures/german-multivariate-repair-tradeoff.png", p)
-```
+<!-- print(p) -->
+<!-- ggsave("paper-figures/german-multivariate-repair-tradeoff.png", p) -->
+<!-- ``` -->
 
-```{r}
-race = read.csv("adult_race_numerical-binsensitive.csv")
-sex = read.csv("adult_sex_numerical-binsensitive.csv")
-both = read.csv("adult_race-sex_numerical-binsensitive.csv")
-race$repair = "race"
-sex$repair = "sex"
-both$repair = "both"
+<!-- ```{r} -->
+<!-- race = read.csv("adult_race_numerical-binsensitive.csv") -->
+<!-- sex = read.csv("adult_sex_numerical-binsensitive.csv") -->
+<!-- both = read.csv("adult_race-sex_numerical-binsensitive.csv") -->
+<!-- race$repair = "race" -->
+<!-- sex$repair = "sex" -->
+<!-- both$repair = "both" -->
 
-df = rbind(race, sex, both) %>% 
-  filter(algorithm %in% c("ZafarFairness", "Calders", "Kamishima", "Feldman-GaussianNB"))
-df$repair <- factor(df$repair, levels = c("race", "sex", "both"))
-p = ggplot(df, aes(x=DIbinary, y=accuracy, colour=repair)) + catscale10 + catscale10_2 + stat_ellipse(geom="polygon", level=0.5, alpha=0.1) + geom_point(alpha=0.3) + ggtitle("Adult dataset") + facet_wrap(~algorithm)
-print(p)
-ggsave("paper-figures/multiple_sensitive.png", p)
-```
+<!-- df = rbind(race, sex, both) %>%  -->
+<!--   filter(algorithm %in% c("ZafarFairness", "Calders", "Kamishima", "Feldman-GaussianNB")) -->
+<!-- df$repair <- factor(df$repair, levels = c("race", "sex", "both")) -->
+<!-- p = ggplot(df, aes(x=DIbinary, y=accuracy, colour=repair)) + catscale10 + catscale10_2 + stat_ellipse(geom="polygon", level=0.5, alpha=0.1) + geom_point(alpha=0.3) + ggtitle("Adult dataset") + facet_wrap(~algorithm) -->
+<!-- print(p) -->
+<!-- ggsave("paper-figures/multiple_sensitive.png", p) -->
+<!-- ``` -->
