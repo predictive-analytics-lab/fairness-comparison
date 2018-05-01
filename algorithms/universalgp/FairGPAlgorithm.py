@@ -60,7 +60,7 @@ class FairGPAlgorithm(Algorithm):
 
         dataset = Dataset(
             train_fn=to_tf_dataset_fn(train.x, train.y, train.s),
-            test_fn=to_tf_dataset_fn(test.x, test.y, test.s),
+            test_fn=to_tf_dataset_fn(test.x[0:1], test.y[0:1], test.s[0:1]),
             input_dim=train.x.shape[1] + 1 if self.s_as_input else train.x.shape[1],
             # xtrain=train.x,
             # ytrain=train.y,
@@ -96,8 +96,8 @@ class FairGPAlgorithm(Algorithm):
             batch_size=50,
             train_steps=1000,
             eval_epochs=10000,
-            summary_steps=100,
-            chkpnt_steps=100,
+            summary_steps=5000,
+            chkpnt_steps=5000,
             save_dir=None,  # "/home/ubuntu/out2/",
             plot=None,
             logging_steps=100,
