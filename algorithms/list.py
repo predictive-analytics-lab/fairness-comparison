@@ -7,7 +7,7 @@ from algorithms.baseline.DecisionTree import DecisionTree
 from algorithms.baseline.GaussianNB import GaussianNB
 from algorithms.baseline.LogisticRegression import LogisticRegression
 from algorithms.ParamGridSearch import ParamGridSearch
-from algorithms.universalgp.FairGPAlgorithm import FairGPAlgorithm
+from algorithms.universalgp.FairGPAlgorithm import GPAlgorithm, FairGPAlgorithm
 
 from metrics.DIAvgAll import DIAvgAll
 from metrics.Accuracy import Accuracy
