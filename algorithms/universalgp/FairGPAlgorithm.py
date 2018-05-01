@@ -10,7 +10,6 @@ from universalgp.datasets.definition import Dataset, to_tf_dataset_fn
 from ..Algorithm import Algorithm
 
 USE_EAGER = False
-DO_FAIR = True
 MAX_NUM_INDUCING = 500
 
 
@@ -18,12 +17,13 @@ class FairGPAlgorithm(Algorithm):
     """
     This class calls the UniversalGP code
     """
-    name = "FairGP"
 
-    def __init__(self, s_as_input=True):
-        Algorithm.__init__(self)
+    def __init__(self, s_as_input=True, fair=True):
+        super().__init__()
         self.counter = 0
         self.s_as_input = s_as_input
+        self.fair = fair
+        self.name = f"FairGP_input_{s_as_input}_fair_{fair}"
 
     def run(self, *data):
         """
@@ -88,7 +88,7 @@ class FairGPAlgorithm(Algorithm):
         biased_acceptance1, biased_acceptance2 = _compute_bias(train.y, train.s)
 
         gp = train_func(dataset, dict(
-            inf='VariationalYbar' if DO_FAIR else 'Variational',
+            inf='VariationalYbar' if self.fair else 'Variational',
             cov='SquaredExponential',
             lr=0.005,
             loo_steps=None,
@@ -141,7 +141,7 @@ class FairGPAlgorithm(Algorithm):
         function should only be implemented if the algorithm has specific parameters that should be tuned, e.g., for
         trading off between fairness and accuracy.
         """
-        return dict(s_as_input=[True, False])
+        return dict(s_as_input=[True, False], fair=[True, False])
 
     @staticmethod
     def get_supported_data_types():
@@ -162,7 +162,7 @@ class FairGPAlgorithm(Algorithm):
         Returns a dictionary mapping from parameter names to default values that should be used with the algorithm. If
         not implemented by a specific algorithm, this returns the empty dictionary.
         """
-        return dict(s_as_input=self.s_as_input)
+        return dict(s_as_input=self.s_as_input, fair=self.fair)
 
 
 def _prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_attrs, single_sensitive,
