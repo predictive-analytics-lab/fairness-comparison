@@ -227,7 +227,7 @@ def _get_normalizer(base):
         max_per_feature = np.amax(base, axis=0)
 
         def normalizer(unnormalized):
-            return unnormalized / max_per_feature
+            return np.where(max_per_feature > 1e-7, unnormalized / max_per_feature, unnormalized)
         return normalizer
 
     def do_nothing(inp):
