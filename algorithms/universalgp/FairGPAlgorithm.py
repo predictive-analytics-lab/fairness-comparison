@@ -1,18 +1,14 @@
 """Code for calling UniversalGP"""
-from collections import namedtuple
-
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from subprocess import call
+import json
 import numpy as np
-import tensorflow as tf
-
-import universalgp as ugp
-from universalgp.datasets.definition import Dataset, to_tf_dataset_fn
 
 from ..Algorithm import Algorithm
 
-DATA = namedtuple('Data', ['x', 'y', 's'])
-
+UGP_PATH = "/home/ubuntu/code/UniversalGP/gaussian_process.py"  # TODO: find a better way to specify the path
 USE_EAGER = False
-MAX_NUM_INDUCING = 500
 
 
 class GPAlgorithm(Algorithm):
@@ -49,81 +45,34 @@ class GPAlgorithm(Algorithm):
                 dictionary as a way of returning the used values to the caller.
         """
         self.counter += 1
-        # Separate the data and do preprocessing which is useful for *every kind* of GP
-        (train, test), label_converter = _prepare_data(*data)
-        # The following is a bit complicated and could be improved
-        # First, we construct the inducing inputs from the separated data
-        # Then, we call `_reorganize` which can change the data depending on what kind of GP we have
-        num_train = train.x.shape[0]
-        inducing_inputs = self._inducing_inputs(train, num_train)
-        train, test = [self._reorganize(prepared_data) for prepared_data in [train, test]]
+        # Separate the data and make sure the labels are either 0 or 1
+        raw_data, label_converter = _prepare_data(*data)
 
-        dataset = Dataset(
-            train_fn=to_tf_dataset_fn(train.x, train.y, train.s),
-            test_fn=to_tf_dataset_fn(test.x[0:1], test.y[0:1], test.s[0:1]),
-            input_dim=inducing_inputs.shape[1],
-            # xtrain=train.x,
-            # ytrain=train.y,
-            # strain=train.s,
-            # xtest=test.x,
-            # ytest=test.y,
-            # stest=test.s,
-            num_train=num_train,
-            inducing_inputs=inducing_inputs,
-            output_dim=train.y.shape[1],
-            lik="LikelihoodLogistic",
-            metric="logistic_accuracy,pred_rate_y1_s0,pred_rate_y1_s1,base_rate_y1_s0,base_rate_y1_s1",
-        )
+        # Set algorithm dependent parameters
+        parameters = self._additional_parameters(raw_data)
 
-        if USE_EAGER:
-            try:
-                tf.enable_eager_execution()
-            except ValueError:
-                pass
-            train_func = ugp.train_eager.train_gp
-        else:
-            tf.logging.set_verbosity(tf.logging.INFO)
-            train_func = ugp.train_graph.train_gp
+        with TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
 
-        gp = train_func(dataset, {**dict(
-            cov='SquaredExponential',
-            lr=0.005,
-            loo_steps=None,
-            model_name=f"run{self.counter}_s_as_input_{self.s_as_input}",
-            batch_size=50,
-            train_steps=1000,
-            eval_epochs=10000,
-            summary_steps=5000,
-            chkpnt_steps=5000,
-            save_dir=None,  # "/home/ubuntu/out2/",
-            plot=None,
-            logging_steps=100,
-            gpus='0',
-            save_preds=False,
-            num_components=1,
-            num_samples=1000,
-            diag_post=False,
-            optimize_inducing=True,
-            use_loo=False,
-            length_scale=1.0,
-            sf=1.0,
-            iso=False,
-            num_samples_pred=2000,
-        ), **self._additional_parameters(train)})
+            # Save the data in a numpy file called 'data.npz'
+            np.savez(tmp_path / Path("data.npz"), **raw_data)
 
-        if USE_EAGER:
-            pred_mean, _ = gp.predict({'input': test.x, 'sensitive': test.s})
-            pred_mean = pred_mean.numpy()
-        else:
-            predictions_gen = gp.predict(lambda: to_tf_dataset_fn(test.x, test.y, test.s)().batch(50))
-            pred_mean = []
-            # pred_var = []
-            for prediction in predictions_gen:
-                pred_mean.append(prediction['mean'])
-                # pred_var.append(prediction['var'])
-            pred_mean = np.stack(pred_mean)
-            # pred_var = np.stack(pred_var)
-        return label_converter((pred_mean > 0.5).astype(test.y.dtype)[:, 0]), []
+            # Construct and execute command
+            model_name = "local"  # f"run{self.counter}_s_as_input_{self.s_as_input}"
+            cmd = f"python {UGP_PATH} "
+            for key, value in _flags(parameters, tmpdir, self.s_as_input, model_name).items():
+                if isinstance(value, str):
+                    cmd += f" --{key}='{value}'"
+                else:
+                    cmd += f" --{key}={value}"
+            call(cmd, shell=True)
+
+            # Read the results from the numpy file 'predictions.npz'
+            output = np.load(tmp_path / Path(model_name) / Path("predictions.npz"))
+            pred_mean = output['pred_mean']
+
+        # Convert the result to the expected format
+        return label_converter((pred_mean > 0.5).astype(raw_data['ytest'].dtype)[:, 0]), []
 
     @staticmethod
     def get_param_info():
@@ -155,46 +104,36 @@ class GPAlgorithm(Algorithm):
         """
         return dict(s_as_input=self.s_as_input)
 
-    def _reorganize(self, data):
-        if self.s_as_input:
-            merged_input = np.concatenate((data.x, data.s), -1)
-            return DATA(x=merged_input, y=data.y, s=data.s)
-        return data
-
-    def _inducing_inputs(self, train, num_train):
-        num_inducing = min(num_train, MAX_NUM_INDUCING)
-        if self.s_as_input:
-            return np.concatenate((train.x[::num_train // num_inducing], train.s[::num_train // num_inducing]), -1)
-        return train.x[::num_train // num_inducing]
-
     @staticmethod
     def _additional_parameters(_):
         return dict(
             inf='Variational',
         )
 
+    def _save_in_json(self, save_path):
+        """Save the settings in a JSON file called 'settings.json'"""
+        with open(save_path / Path("settings.json"), 'w') as fp:
+            json.dump(dict(s_as_input=self.s_as_input, counter=self.counter), fp, ensure_ascii=False, indent=2)
+
 
 class FairGPAlgorithm(GPAlgorithm):
     """Fair GP algorithm"""
     def __init__(self, s_as_input=True):
-        super().__init__(s_as_input)
+        super().__init__(s_as_input=s_as_input)
         self.name = f"FairGP_input_{s_as_input}"
 
-    def _additional_parameters(self, train):
-        biased_acceptance1, biased_acceptance2 = _compute_bias(train.y, train.s)
+    def _additional_parameters(self, raw_data):
+        biased_acceptance1, biased_acceptance2 = _compute_bias(raw_data['ytrain'], raw_data['strain'])
+        target_rate = .5 * (biased_acceptance1 + biased_acceptance2)
 
         return dict(
             inf='VariationalYbar',
-            target_rate1=.5 * (biased_acceptance1 + biased_acceptance2),
-            target_rate2=.5 * (biased_acceptance1 + biased_acceptance2),
+            target_rate1=target_rate,
+            target_rate2=target_rate,
             biased_acceptance1=biased_acceptance1,
             biased_acceptance2=biased_acceptance2,
-            s_as_input=self.s_as_input,
             probs_from_flipped=False,
         )
-
-    def _reorganize(self, data):
-        return data
 
 
 def _prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_attrs, single_sensitive,
@@ -207,32 +146,10 @@ def _prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_a
     # Check sensitive attributes
     assert list(np.unique(sensitive[0])) == [0, 1] or list(np.unique(sensitive[0])) == [0., 1.]
 
-    # Normalize input
-    input_normalizer = _get_normalizer(nosensitive[0])  # the normalizer must be based only on the training data
-    nosensitive = [input_normalizer(x) for x in nosensitive]
-
     # Check labels
     label, label_converter = _fix_labels(label, positive_class_val)
-    return [DATA(x=x, y=y, s=s) for x, y, s in zip(nosensitive, label, sensitive)], label_converter
-
-
-def _compute_bias(labels, sensitive):
-    rate_y1_s0 = np.sum(labels[sensitive == 0] == 1) / np.sum(sensitive == 0)
-    rate_y1_s1 = np.sum(labels[sensitive == 1] == 1) / np.sum(sensitive == 1)
-    return rate_y1_s0, rate_y1_s1
-
-
-def _get_normalizer(base):
-    if base.min() == 0 and base.max() > 10:
-        max_per_feature = np.amax(base, axis=0)
-
-        def normalizer(unnormalized):
-            return np.where(max_per_feature > 1e-7, unnormalized / max_per_feature, unnormalized)
-        return normalizer
-
-    def do_nothing(inp):
-        return inp
-    return do_nothing
+    return dict(xtrain=nosensitive[0], xtest=nosensitive[1], ytrain=label[0], ytest=label[1], strain=sensitive[0],
+                stest=sensitive[1]), label_converter
 
 
 def _fix_labels(labels, positive_class_val):
@@ -247,5 +164,41 @@ def _fix_labels(labels, positive_class_val):
         def converter(label):
             return 2 - label
         return [2 - y for y in labels], converter
-    else:
-        raise ValueError("Labels have unknown structure")
+    raise ValueError("Labels have unknown structure")
+
+
+def _compute_bias(labels, sensitive):
+    rate_y1_s0 = np.sum(labels[sensitive == 0] == 1) / np.sum(sensitive == 0)
+    rate_y1_s1 = np.sum(labels[sensitive == 1] == 1) / np.sum(sensitive == 1)
+    return rate_y1_s0, rate_y1_s1
+
+
+def _flags(additional, save_dir, s_as_input, model_name):
+    return {**dict(
+        tf_mode='eager' if USE_EAGER else 'graph',
+        data='sensitive_from_numpy',
+        dataset_dir=save_dir,
+        cov='SquaredExponential',
+        lr=0.005,
+        model_name=model_name,
+        batch_size=50,
+        train_steps=1000,
+        eval_epochs=10000,
+        summary_steps=5000,
+        chkpnt_steps=5000,
+        save_dir=save_dir,  # "/home/ubuntu/out2/",
+        plot='',
+        logging_steps=100,
+        gpus='0',
+        save_preds=True,  # save the predictions into `predictions.npz`
+        num_components=1,
+        num_samples=1000,
+        diag_post=False,
+        optimize_inducing=True,
+        use_loo=False,
+        length_scale=1.0,
+        sf=1.0,
+        iso=False,
+        num_samples_pred=2000,
+        s_as_input=s_as_input,
+    ), **additional}
