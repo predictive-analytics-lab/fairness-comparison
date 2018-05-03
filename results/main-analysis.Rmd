@@ -114,9 +114,18 @@ nb_measure_comparison = function(name, measure) {
 }
 
 algos_to_plot = c(
-  "ZafarFairness", "Calders", "SVM", 
-  "Feldman-SVM", "DecisionTree", 
-  "Feldman-DecisionTree", "Kamishima","UniversalGP")
+  "ZafarFairness",
+  "Calders",
+  "SVM",
+  "Feldman-SVM",
+  "DecisionTree",
+  "Feldman-DecisionTree",
+  "Kamishima",
+  # "GP_input_False",
+  # "GP_input_True",
+  # "FairGP_input_False",
+  "FairGP_input_True"
+)
 
 ```
 
@@ -221,8 +230,8 @@ q = ggarrange(q_CV, q_DI, ncol=1, nrow=2, common.legend = TRUE, legend="right")
 print(q)
 ggsave("AWS-result/propublica-violent-recidivism_sex_fair.png", q)
 
-q_CV = make_scatter_figure("ricci_Race", var1="CV", var2="accuracy", display = 0)
-q_DI = make_scatter_figure("ricci_Race", var1="DIbinary", var2="accuracy", display = 1)
+q_CV = make_scatter_figure("ricci_race", var1="CV", var2="accuracy", display = 0)
+q_DI = make_scatter_figure("ricci_race", var1="DIbinary", var2="accuracy", display = 1)
 q = ggarrange(q_CV, q_DI, ncol=1, nrow=2, common.legend = TRUE, legend="right")
 print(q)
 ggsave("AWS-result/ricci_fair.png", q)
@@ -295,10 +304,10 @@ p = make_sensitivity_figure("propublica-violent-recidivism_sex_numerical-binsens
 print(p)
 ggsave("AWS-result/propublica-violent-recidivism_sex_sensitivity.png", p)
 
-p = make_sensitivity_figure("ricci_Race_numerical-binsensitive.csv") +
+p = make_sensitivity_figure("ricci_race_numerical-binsensitive.csv") +
   ggtitle("Ricci dataset, race attribute")
 print(p)
-ggsave("AWS-result/ricci_Race_sensitivity.png", p)
+ggsave("AWS-result/ricci_race_sensitivity.png", p)
 
 p = make_sensitivity_figure("two-gaussians_sensitive-attr_numerical-binsensitive.csv") +
   ggtitle("Two-gaussians_sensitive-attr dataset, sensitive attribute")
