@@ -118,13 +118,21 @@ class GPAlgorithm(Algorithm):
 
 class FairGPAlgorithm(GPAlgorithm):
     """Fair GP algorithm"""
-    def __init__(self, s_as_input=True):
+    def __init__(self, s_as_input=True, target_acceptance=None):
         super().__init__(s_as_input=s_as_input)
-        self.name = f"FairGP_input_{s_as_input}"
+        if target_acceptance is None:
+            self.name = f"FairGP_input_{s_as_input}"
+        else:
+            self.name = f"FairGP_in_{s_as_input}_tar_{target_acceptance}"
+        self.target_acceptance = target_acceptance
 
     def _additional_parameters(self, raw_data):
         biased_acceptance1, biased_acceptance2 = _compute_bias(raw_data['ytrain'], raw_data['strain'])
-        target_rate = .5 * (biased_acceptance1 + biased_acceptance2)
+
+        if self.target_acceptance is None:
+            target_rate = .5 * (biased_acceptance1 + biased_acceptance2)
+        else:
+            target_rate = self.target_acceptance
 
         return dict(
             inf='VariationalYbar',
