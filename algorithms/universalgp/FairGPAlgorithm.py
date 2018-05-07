@@ -99,7 +99,7 @@ class GPAlgorithm(Algorithm):
             plot=None,
             logging_steps=100,
             gpus='0',
-            save_preds=False,
+            preds_path='',  # don't save predictions
             num_components=1,
             num_samples=1000,
             diag_post=False,
@@ -247,5 +247,4 @@ def _fix_labels(labels, positive_class_val):
         def converter(label):
             return 2 - label
         return [2 - y for y in labels], converter
-    else:
-        raise ValueError("Labels have unknown structure")
+    raise ValueError("Labels have unknown structure")
