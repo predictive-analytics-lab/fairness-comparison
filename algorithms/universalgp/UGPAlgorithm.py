@@ -62,13 +62,7 @@ class UGP(Algorithm):
 
             # Construct and execute command
             model_name = "local"  # f"run{self.counter}_s_as_input_{self.s_as_input}"
-            cmd = f"python {UGP_PATH} "
-            for key, value in _flags(parameters, tmpdir, self.s_as_input, model_name, len(raw_data['ytrain'])).items():
-                if isinstance(value, str):
-                    cmd += f" --{key}='{value}'"
-                else:
-                    cmd += f" --{key}={value}"
-            call(cmd, shell=True)
+            self.run_ugp(_flags(parameters, tmpdir, self.s_as_input, model_name, raw_data['ytrain'].shape[0]))
 
             # Read the results from the numpy file 'predictions.npz'
             output = np.load(tmp_path / Path(model_name) / Path("predictions.npz"))
@@ -76,6 +70,17 @@ class UGP(Algorithm):
 
         # Convert the result to the expected format
         return label_converter((pred_mean > 0.5).astype(raw_data['ytest'].dtype)[:, 0]), []
+
+    @staticmethod
+    def run_ugp(flags):
+        """Run UniversalGP as a separte process"""
+        cmd = f"python {UGP_PATH} "
+        for key, value in flags.items():
+            if isinstance(value, str):
+                cmd += f" --{key}='{value}'"
+            else:
+                cmd += f" --{key}={value}"
+        call(cmd, shell=True)  # run `cmd`
 
     @staticmethod
     def get_param_info():
@@ -147,6 +152,68 @@ class UGPDemPar(UGP):
         )
 
 
+class UGPEqOpp(UGP):
+    """GP algorithm which enforces equality of opportunity"""
+    def __init__(self, s_as_input=True):
+        super().__init__(s_as_input=s_as_input)
+        self.name = f"UGP_eq_opp_in_{s_as_input}"
+
+    def _additional_parameters(self, raw_data):
+        biased_acceptance1, biased_acceptance2 = compute_bias(raw_data['ytrain'], raw_data['strain'])
+
+        return dict(
+            inf='VariationalYbarEqOdds',
+            p_ybary0_s0=1.0,
+            p_ybary0_s1=1.0,
+            p_ybary1_s0=1.0,
+            p_ybary1_s1=1.0,
+            biased_acceptance1=biased_acceptance1,
+            biased_acceptance2=biased_acceptance2,
+        )
+
+    def run(self, *data):
+        self.counter += 1
+        raw_data, label_converter = _prepare_data(*data)
+
+        parameters = self._additional_parameters(raw_data)
+
+        with TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            model_name = "local"  # f"run{self.counter}_s_as_input_{self.s_as_input}"
+            # Save with train data as test data
+            np.savez(tmp_path / Path("data.npz"), xtrain=raw_data['xtrain'], ytrain=raw_data['ytrain'],
+                     strain=raw_data['strain'], xtest=raw_data['xtrain'], ytest=raw_data['ytrain'],
+                     stest=raw_data['strain'])
+
+            # First run
+            flags = _flags(parameters, tmpdir, self.s_as_input, model_name, raw_data['ytrain'].shape[0])
+            self.run_ugp(flags)
+
+            # Read the results from the numpy file 'predictions.npz'
+            prediction_on_train = np.load(tmp_path / Path(model_name) / Path("predictions.npz"))
+            preds = (prediction_on_train['pred_mean'] > 0.5).astype(int)
+            odds = _compute_odds(raw_data['ytrain'], preds, raw_data['strain'])
+
+            # Enforce equality of opportunity
+            opportunity = min(odds['p_ybary1_s0'], odds['p_ybary1_s1'])
+            odds['p_ybary1_s0'] = opportunity
+            odds['p_ybary1_s1'] = opportunity
+
+            # Save with real test data
+            np.savez(tmp_path / Path("data.npz"), **raw_data)
+
+            # Second run
+            flags.update({'train_steps': 2 * flags['train_steps'], **odds})
+            self.run_ugp(flags)
+
+            # Read the results from the numpy file 'predictions.npz'
+            output = np.load(tmp_path / Path(model_name) / Path("predictions.npz"))
+            pred_mean = output['pred_mean']
+
+        # Convert the result to the expected format
+        return label_converter((pred_mean > 0.5).astype(raw_data['ytest'].dtype)[:, 0]), []
+
+
 def _prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_attrs, single_sensitive,
                   privileged_vals, params):
     # Separate data
@@ -168,6 +235,16 @@ def compute_bias(labels, sensitive):
     rate_y1_s0 = np.sum(labels[sensitive == 0] == 1) / np.sum(sensitive == 0)
     rate_y1_s1 = np.sum(labels[sensitive == 1] == 1) / np.sum(sensitive == 1)
     return rate_y1_s0, rate_y1_s1
+
+
+def _compute_odds(labels, predictions, sensitive):
+    """Compute the bias in the predictions with respect to the sensitive attributes and the labels"""
+    return dict(
+        p_ybary0_s0=np.mean(predictions[np.logical_and(labels == 0, sensitive == 0)] == 0),
+        p_ybary1_s0=np.mean(predictions[np.logical_and(labels == 1, sensitive == 0)] == 1),
+        p_ybary0_s1=np.mean(predictions[np.logical_and(labels == 0, sensitive == 1)] == 0),
+        p_ybary1_s1=np.mean(predictions[np.logical_and(labels == 1, sensitive == 1)] == 1),
+    )
 
 
 def fix_labels(labels, positive_class_val):
