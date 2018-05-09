@@ -8,6 +8,7 @@ import universalgp as ugp
 from universalgp.datasets.definition import Dataset, to_tf_dataset_fn
 
 from ..Algorithm import Algorithm
+from .UGPAlgorithm import fix_labels, compute_bias
 
 DATA = namedtuple('Data', ['x', 'y', 's'])
 
@@ -181,7 +182,7 @@ class FairGPAlgorithm(GPAlgorithm):
         self.name = f"FairGP_input_{s_as_input}"
 
     def _additional_parameters(self, train):
-        biased_acceptance1, biased_acceptance2 = _compute_bias(train.y, train.s)
+        biased_acceptance1, biased_acceptance2 = compute_bias(train.y, train.s)
 
         return dict(
             inf='VariationalYbar',
@@ -212,14 +213,8 @@ def _prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_a
     nosensitive = [input_normalizer(x) for x in nosensitive]
 
     # Check labels
-    label, label_converter = _fix_labels(label, positive_class_val)
+    label, label_converter = fix_labels(label, positive_class_val)
     return [DATA(x=x, y=y, s=s) for x, y, s in zip(nosensitive, label, sensitive)], label_converter
-
-
-def _compute_bias(labels, sensitive):
-    rate_y1_s0 = np.sum(labels[sensitive == 0] == 1) / np.sum(sensitive == 0)
-    rate_y1_s1 = np.sum(labels[sensitive == 1] == 1) / np.sum(sensitive == 1)
-    return rate_y1_s0, rate_y1_s1
 
 
 def _get_normalizer(base):
@@ -233,18 +228,3 @@ def _get_normalizer(base):
     def do_nothing(inp):
         return inp
     return do_nothing
-
-
-def _fix_labels(labels, positive_class_val):
-    label_values = list(np.unique(labels[0]))
-    if label_values == [0, 1] and positive_class_val == 1:
-
-        def do_nothing(inp):
-            return inp
-        return labels, do_nothing
-    elif label_values == [1, 2] and positive_class_val == 1:
-
-        def converter(label):
-            return 2 - label
-        return [2 - y for y in labels], converter
-    raise ValueError("Labels have unknown structure")
