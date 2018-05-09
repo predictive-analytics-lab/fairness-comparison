@@ -7,16 +7,16 @@ class Ricci(Data):
         Data.__init__(self)
         self.dataset_name = 'ricci'
         # Class attribute will not be created until data_specific_processing is run.
-        self.class_attr = 'Class'
+        self.class_attr = 'class'
         self.positive_class_val = 1
         self.sensitive_attrs = ['race']
         self.privileged_class_names = ['W']
-        self.categorical_features = [ 'Position' ]
-        self.features_to_keep = [ 'Position', 'Oral', 'Written', 'Race', 'Combine' ]
+        self.categorical_features = ['position']
+        self.features_to_keep = ['position', 'oral', 'written', 'race', 'combine']
         self.missing_val_indicators = []
 
     def data_specific_processing(self, dataframe):
-        dataframe['Class'] = dataframe.apply(passing_grade, axis=1)
+        dataframe['class'] = dataframe.apply(passing_grade, axis=1)
         return dataframe
 
     def handle_missing_data(self, dataframe):
