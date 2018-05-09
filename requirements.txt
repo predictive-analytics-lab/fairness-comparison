@@ -16,3 +16,5 @@ wheel==0.29.0
 fire == 0.1.3
 BlackBoxAuditing==0.1.40
 ggplot ==0.11.5
+cvxpy == 0.4.11
+dccp == 0.1.6
