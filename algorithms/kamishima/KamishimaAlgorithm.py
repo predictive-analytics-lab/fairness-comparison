@@ -34,8 +34,8 @@ class KamishimaAlgorithm(Algorithm):
     - fill missing values ahead of time in order to avoid imputation.
 
     If you do this, train_pr.py:148-149 will take the last column to be y
-    (the target classes to predict), then pr.py:264 will take the
-    second-to-last column as the sensitive attribute, and pr.py:265-268
+    (the target classes to predict), then PR.py:264 will take the
+    second-to-last column as the sensitive attribute, and PR.py:265-268
     will take the remaining columns as non-sensitive.
 
     """
