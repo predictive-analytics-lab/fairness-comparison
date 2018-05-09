@@ -8,6 +8,7 @@ from algorithms.baseline.GaussianNB import GaussianNB
 from algorithms.baseline.LogisticRegression import LogisticRegression
 from algorithms.ParamGridSearch import ParamGridSearch
 from algorithms.universalgp.FairGPAlgorithm import GPAlgorithm, FairGPAlgorithm
+from algorithms.universalgp.UGPAlgorithm import UGP, UGPDemPar
 
 from metrics.DIAvgAll import DIAvgAll
 from metrics.Accuracy import Accuracy
