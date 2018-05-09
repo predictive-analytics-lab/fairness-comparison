@@ -1,5 +1,3 @@
-import numpy
-
 from metrics.Accuracy import Accuracy
 from metrics.BCR import BCR
 from metrics.CalibrationNeg import CalibrationNeg
@@ -17,12 +15,14 @@ from metrics.MCC import MCC
 from metrics.SensitiveMetric import SensitiveMetric
 from metrics.TNR import TNR
 from metrics.TPR import TPR
+from metrics.pr import PR
 
-METRICS = [ Accuracy(), TPR(), TNR(), BCR(), MCC(),        # accuracy metrics
-            DIBinary(), DIAvgAll(), CV(),                  # fairness metrics
-            SensitiveMetric(Accuracy), SensitiveMetric(TPR), SensitiveMetric(TNR),
-            SensitiveMetric(FPR), SensitiveMetric(FNR),
-            SensitiveMetric(CalibrationPos), SensitiveMetric(CalibrationNeg) ]
+METRICS = [Accuracy(), TPR(), TNR(), BCR(), MCC(),        # accuracy metrics
+           DIBinary(), DIAvgAll(), CV(),                  # fairness metrics
+           SensitiveMetric(Accuracy), SensitiveMetric(TPR), SensitiveMetric(TNR),
+           SensitiveMetric(FPR), SensitiveMetric(FNR), SensitiveMetric(PR),
+           SensitiveMetric(CalibrationPos), SensitiveMetric(CalibrationNeg)]
+
 
 def get_metrics(dataset, sensitive_dict, tag):
     """
