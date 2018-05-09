@@ -13,17 +13,38 @@ from metrics.DIAvgAll import DIAvgAll
 from metrics.Accuracy import Accuracy
 from metrics.MCC import MCC
 
-ALGORITHMS = [FairGPAlgorithm(s_as_input=True),
-              SVM(),
-              GaussianNB(),
-              LogisticRegression(),
-              DecisionTree(),
-              CaldersAlgorithm(),
-              KamishimaAlgorithm(),
-              FeldmanAlgorithm(SVM()), FeldmanAlgorithm(GaussianNB()),       # Feldman
-              FeldmanAlgorithm(LogisticRegression()), FeldmanAlgorithm(DecisionTree()),
-              ZafarAlgorithmFairness(),
-              ZafarAlgorithmAccuracy()]
+ALGORITHMS = [
+    GPAlgorithm(s_as_input=False),
+    GPAlgorithm(s_as_input=True),
+    FairGPAlgorithm(s_as_input=True, target_acceptance=.1),
+    FairGPAlgorithm(s_as_input=True, target_acceptance=.2),
+    FairGPAlgorithm(s_as_input=True, target_acceptance=.3),
+    FairGPAlgorithm(s_as_input=True, target_acceptance=.4),
+    FairGPAlgorithm(s_as_input=True, target_acceptance=.5),
+    FairGPAlgorithm(s_as_input=True, target_acceptance=.6),
+    FairGPAlgorithm(s_as_input=True, target_acceptance=.7),
+    FairGPAlgorithm(s_as_input=True, target_acceptance=.8),
+    FairGPAlgorithm(s_as_input=True, target_acceptance=.9),
+    FairGPAlgorithm(s_as_input=False, target_acceptance=.1),
+    FairGPAlgorithm(s_as_input=False, target_acceptance=.2),
+    FairGPAlgorithm(s_as_input=False, target_acceptance=.3),
+    FairGPAlgorithm(s_as_input=False, target_acceptance=.4),
+    FairGPAlgorithm(s_as_input=False, target_acceptance=.5),
+    FairGPAlgorithm(s_as_input=False, target_acceptance=.6),
+    FairGPAlgorithm(s_as_input=False, target_acceptance=.7),
+    FairGPAlgorithm(s_as_input=False, target_acceptance=.8),
+    FairGPAlgorithm(s_as_input=False, target_acceptance=.9),
+    # SVM(),
+    # GaussianNB(),
+    # LogisticRegression(),
+    # DecisionTree(),
+    # CaldersAlgorithm(),
+    # KamishimaAlgorithm(),
+    # FeldmanAlgorithm(SVM()), FeldmanAlgorithm(GaussianNB()),       # Feldman
+    # FeldmanAlgorithm(LogisticRegression()), FeldmanAlgorithm(DecisionTree()),
+    # ZafarAlgorithmFairness(),
+    # ZafarAlgorithmAccuracy(),
+]
 
 # ALGORITHMS = [UniversalGPAlgorithm(s_as_input=True)]     # baseline
 
