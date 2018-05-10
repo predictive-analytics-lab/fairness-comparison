@@ -91,4 +91,4 @@ class SensitiveMetric(Metric):
         """
         self.sensitive_attr = sensitive_name
         self.sensitive_val = sensitive_val
-        self.name = str(sensitive_val) + "-" + self.name
+        self.name = str(sensitive_val) + "-" + self.name + "-" + str(sensitive_name)

@@ -116,13 +116,13 @@ nb_measure_comparison = function(name, measure) {
 algos_to_plot = c(
   "ZafarFairness", "Calders", "SVM", 
   "Feldman-SVM", "DecisionTree", 
-  "Feldman-DecisionTree", "Kamishima","FairGP_input_True", "GP_input_True")
+  "Feldman-DecisionTree", "Kamishima","FairGP_input_True", "GP_input_True", "ZafarEqOpp", "ZafarEqOdd")
 
 make_scatter_figure = function(name, var1="CV", var2="accuracy", display="off") {
   x_var = as.name(var1)
   y_var = as.name(var2)
 
-  df = read.csv(str_c(name, "_numerical-binsensitive.csv"), check.names=TRUE) %>%
+  df = read.csv(str_c(name, "_numerical-binsensitive.csv"), check.names=FALSE) %>%
     filter(algorithm %in% algos_to_plot) %>%
     mutate(algorithm=recode(algorithm, ZafarFairness="Zafar")) # rename to Zafar for clarity
 
@@ -147,70 +147,70 @@ make_scatter_figure = function(name, var1="CV", var2="accuracy", display="off") 
 
 q_CV = make_scatter_figure("adult_race", var1="CV", var2="accuracy", display = "title")
 q_DI = make_scatter_figure("adult_race", var1="DIbinary", var2="accuracy", display = "off")
-q_diff = make_scatter_figure("adult_race", var1="race.TPRDiff", var2="accuracy", display = "captain")
+q_diff = make_scatter_figure("adult_race", var1="race-TPRDiff", var2="accuracy", display = "captain")
 q = ggarrange(q_CV, q_DI, q_diff, ncol=1, nrow=3, common.legend = TRUE, legend="right")
 print(q)
 ggsave("AWS-result/adult_race_fair.png", q)
 
 q_CV = make_scatter_figure("adult_sex", var1="CV", var2="accuracy", display = "title")
 q_DI = make_scatter_figure("adult_sex", var1="DIbinary", var2="accuracy", display = "off")
-q_diff = make_scatter_figure("adult_sex", var1="sex.TPRDiff", var2="accuracy", display = "captain")
+q_diff = make_scatter_figure("adult_sex", var1="sex-TPRDiff", var2="accuracy", display = "captain")
 q = ggarrange(q_CV, q_DI, q_diff, ncol=1, nrow=3, common.legend = TRUE, legend="right")
 print(q)
 ggsave("AWS-result/adult_sex_fair.png", q)
 
 q_CV = make_scatter_figure("german_age", var1="CV", var2="accuracy", display = "title")
 q_DI = make_scatter_figure("german_age", var1="DIbinary", var2="accuracy", display = "off")
-q_diff = make_scatter_figure("german_age", var1="age.TPRDiff", var2="accuracy", display = "captain")
+q_diff = make_scatter_figure("german_age", var1="age-TPRDiff", var2="accuracy", display = "captain")
 q = ggarrange(q_CV, q_DI, q_diff, ncol=1, nrow=3, common.legend = TRUE, legend="right")
 print(q)
 ggsave("AWS-result/german_age_fair.png", q)
 
 q_CV = make_scatter_figure("german_sex", var1="CV", var2="accuracy", display = "title")
 q_DI = make_scatter_figure("german_sex", var1="DIbinary", var2="accuracy", display = "off")
-q_diff = make_scatter_figure("german_sex", var1="sex.TPRDiff", var2="accuracy", display = "captain")
+q_diff = make_scatter_figure("german_sex", var1="sex-TPRDiff", var2="accuracy", display = "captain")
 q = ggarrange(q_CV, q_DI, q_diff, ncol=1, nrow=3, common.legend = TRUE, legend="right")
 print(q)
 ggsave("AWS-result/german_sex_fair.png", q)
 
 q_CV = make_scatter_figure("propublica-recidivism_race", var1="CV", var2="accuracy", display = "title")
 q_DI = make_scatter_figure("propublica-recidivism_race", var1="DIbinary", var2="accuracy", display = "off")
-q_diff = make_scatter_figure("propublica-recidivism_race", var1="race.TPRDiff", var2="accuracy", display = "captain")
+q_diff = make_scatter_figure("propublica-recidivism_race", var1="race-TPRDiff", var2="accuracy", display = "captain")
 q = ggarrange(q_CV, q_DI, q_diff, ncol=1, nrow=3, common.legend = TRUE, legend="right")
 print(q)
 ggsave("AWS-result/propublica-recidivism_race_fair.png", q)
 
 q_CV = make_scatter_figure("propublica-recidivism_sex", var1="CV", var2="accuracy", display = "title")
 q_DI = make_scatter_figure("propublica-recidivism_sex", var1="DIbinary", var2="accuracy", display = "off")
-q_diff = make_scatter_figure("propublica-recidivism_sex", var1="sex.TPRDiff", var2="accuracy", display = "captain")
+q_diff = make_scatter_figure("propublica-recidivism_sex", var1="sex-TPRDiff", var2="accuracy", display = "captain")
 q = ggarrange(q_CV, q_DI, q_diff, ncol=1, nrow=3, common.legend = TRUE, legend="right")
 print(q)
 ggsave("AWS-result/propublica-recidivism_sex_fair.png", q)
 
 q_CV = make_scatter_figure("propublica-violent-recidivism_race", var1="CV", var2="accuracy", display = "title")
 q_DI = make_scatter_figure("propublica-violent-recidivism_race", var1="DIbinary", var2="accuracy", display = "off")
-q_diff = make_scatter_figure("propublica-violent-recidivism_race", var1="race.TPRDiff", var2="accuracy", display = "captain")
+q_diff = make_scatter_figure("propublica-violent-recidivism_race", var1="race-TPRDiff", var2="accuracy", display = "captain")
 q = ggarrange(q_CV, q_DI, q_diff, ncol=1, nrow=3, common.legend = TRUE, legend="right")
 print(q)
 ggsave("AWS-result/propublica-violent-recidivism_race_fair.png", q)
 
 q_CV = make_scatter_figure("propublica-violent-recidivism_sex", var1="CV", var2="accuracy", display = "title")
 q_DI = make_scatter_figure("propublica-violent-recidivism_sex", var1="DIbinary", var2="accuracy", display = "off")
-q_diff = make_scatter_figure("propublica-violent-recidivism_sex", var1="sex.TPRDiff", var2="accuracy", display = "captain")
+q_diff = make_scatter_figure("propublica-violent-recidivism_sex", var1="sex-TPRDiff", var2="accuracy", display = "captain")
 q = ggarrange(q_CV, q_DI, q_diff, ncol=1, nrow=3, common.legend = TRUE, legend="right")
 print(q)
 ggsave("AWS-result/propublica-violent-recidivism_sex_fair.png", q)
 
 q_CV = make_scatter_figure("ricci_race", var1="CV", var2="accuracy", display = "title")
 q_DI = make_scatter_figure("ricci_race", var1="DIbinary", var2="accuracy", display = "off")
-q_diff = make_scatter_figure("ricci_race", var1="race.TPRDiff", var2="accuracy", display = "captain")
+q_diff = make_scatter_figure("ricci_race", var1="race-TPRDiff", var2="accuracy", display = "captain")
 q = ggarrange(q_CV, q_DI, q_diff, ncol=1, nrow=3, common.legend = TRUE, legend="right")
 print(q)
 ggsave("AWS-result/ricci_fair.png", q)
 
 q_CV = make_scatter_figure("two-gaussians_sensitive-attr", var1="CV", var2="accuracy", display = "title")
 q_DI = make_scatter_figure("two-gaussians_sensitive-attr", var1="DIbinary", var2="accuracy", display = "off")
-q_DI = make_scatter_figure("two-gaussians_sensitive-attr", var1="sensitive.attr.TPRDiff", var2="accuracy", display = "captain")
+q_DI = make_scatter_figure("two-gaussians_sensitive-attr", var1="sensitive-attr-TPRDiff", var2="accuracy", display = "captain")
 q = ggarrange(q_CV, q_DI, q_diff, ncol=1, nrow=3, common.legend = TRUE, legend="right")
 print(q)
 ggsave("AWS-result/two-gaussians_sensitive-attr_fair.png", q)
@@ -230,59 +230,59 @@ plot_sensitivity = function(df, var1, var2) {
 }
 
 make_sensitivity_figure = function(name, var1="DIbinary", var2="accuracy") {
-  df = read.csv(name, check.names=TRUE) %>%
+  df = read.csv(name, check.names=FALSE) %>%
     filter(algorithm %in% algos_to_plot) %>%
     mutate(algorithm=recode(algorithm, ZafarFairness="Zafar")) # rename to Zafar for clarity
 
   plot_sensitivity(df, var1, var2)
 }
 
-p = make_sensitivity_figure("adult_sex_numerical-binsensitive.csv", var1 = "sex.TPRDiff") +
+p = make_sensitivity_figure("adult_sex_numerical-binsensitive.csv", var1 = "sex-TPRDiff") +
   ggtitle("Adult dataset, sex attribute")
 print(p)
 ggsave("AWS-result/adult_sex_diff_sensitivity.png", p)
 
-p = make_sensitivity_figure("adult_race_numerical-binsensitive.csv", var1 = "race.TPRDiff") +
+p = make_sensitivity_figure("adult_race_numerical-binsensitive.csv", var1 = "race-TPRDiff") +
   ggtitle("Adult dataset, race attribute")
 print(p)
 ggsave("AWS-result/adult_race_diff_sensitivity.png", p)
 
-p = make_sensitivity_figure("german_age_numerical-binsensitive.csv", var1 = "age.TPRDiff") +
+p = make_sensitivity_figure("german_age_numerical-binsensitive.csv", var1 = "age-TPRDiff") +
   ggtitle("German dataset, age attribute")
 print(p)
 ggsave("AWS-result/german_age_diff_sensitivity.png", p)
 
-p = make_sensitivity_figure("german_sex_numerical-binsensitive.csv", var1 = "sex.TPRDiff") +
+p = make_sensitivity_figure("german_sex_numerical-binsensitive.csv", var1 = "sex-TPRDiff") +
   ggtitle("German dataset, sex attribute")
 print(p)
 ggsave("AWS-result/german_sex_diff_sensitivity.png", p)
 
-p = make_sensitivity_figure("propublica-recidivism_race_numerical-binsensitive.csv", var1 = "race.TPRDiff") +
+p = make_sensitivity_figure("propublica-recidivism_race_numerical-binsensitive.csv", var1 = "race-TPRDiff") +
   ggtitle("Propublica-recidivism dataset, race attribute")
 print(p)
 ggsave("AWS-result/propublica-recidivism_race_diff_sensitivity.png", p)
 
-p = make_sensitivity_figure("propublica-recidivism_sex_numerical-binsensitive.csv", var1 = "sex.TPRDiff") +
+p = make_sensitivity_figure("propublica-recidivism_sex_numerical-binsensitive.csv", var1 = "sex-TPRDiff") +
   ggtitle("Propublica-recidivism dataset, sex attribute")
 print(p)
 ggsave("AWS-result/propublica-recidivism_sex_diff_sensitivity.png", p)
 
-p = make_sensitivity_figure("propublica-violent-recidivism_race_numerical-binsensitive.csv", var1 = "race.TPRDiff") +
+p = make_sensitivity_figure("propublica-violent-recidivism_race_numerical-binsensitive.csv", var1 = "race-TPRDiff") +
   ggtitle("Propublica-violent-recidivism dataset, race attribute")
 print(p)
 ggsave("AWS-result/propublica-violent-recidivism_race_diff_sensitivity.png", p)
 
-p = make_sensitivity_figure("propublica-violent-recidivism_sex_numerical-binsensitive.csv", var1 = "sex.TPRDiff") +
+p = make_sensitivity_figure("propublica-violent-recidivism_sex_numerical-binsensitive.csv", var1 = "sex-TPRDiff") +
   ggtitle("Propublica-violent-recidivism dataset, sex attribute")
 print(p)
 ggsave("AWS-result/propublica-violent-recidivism_sex_diff_sensitivity.png", p)
 
-p = make_sensitivity_figure("ricci_race_numerical-binsensitive.csv", var1 = "race.TPRDiff") +
+p = make_sensitivity_figure("ricci_race_numerical-binsensitive.csv", var1 = "race-TPRDiff") +
   ggtitle("Ricci dataset, race attribute")
 print(p)
 ggsave("AWS-result/ricci_race_diff_sensitivity.png", p)
 
-p = make_sensitivity_figure("two-gaussians_sensitive-attr_numerical-binsensitive.csv", var1 = "sensitive.attr.TPRDiff") +
+p = make_sensitivity_figure("two-gaussians_sensitive-attr_numerical-binsensitive.csv", var1 = "sensitive-attr-TPRDiff") +
   ggtitle("Two-gaussians_sensitive-attr dataset, sensitive attribute")
 print(p)
 ggsave("AWS-result/two-gaussians_sensitive-attr_diff_sensitivity.png", p)
