@@ -10,7 +10,7 @@ from metrics.list import get_metrics
 
 from algorithms.ParamGridSearch import ParamGridSearch
 
-NUM_TRIALS_DEFAULT = 10
+NUM_TRIALS_DEFAULT = 5
 
 
 def get_algorithm_names():
@@ -33,11 +33,10 @@ def run(num_trials=NUM_TRIALS_DEFAULT,
 
         print("\nEvaluating dataset:" + dataset_obj.get_dataset_name())
 
-        processed_dataset = ProcessedData(dataset_obj)
-        train_test_splits = processed_dataset.create_train_test_splits(num_trials)
-
         all_sensitive_attributes = dataset_obj.get_sensitive_attributes_with_joint()
         for sensitive in all_sensitive_attributes:
+            processed_dataset = ProcessedData(dataset_obj)
+            train_test_splits = processed_dataset.create_train_test_splits(num_trials, sensitive)
 
             print("Sensitive attribute:" + sensitive)
 
