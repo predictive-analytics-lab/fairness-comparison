@@ -180,10 +180,10 @@ class UGPEqOpp(UGP):
         with TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
             model_name = "local"  # f"run{self.counter}_s_as_input_{self.s_as_input}"
-            # Save with train data as test data
-            np.savez(tmp_path / Path("data.npz"), xtrain=raw_data['xtrain'], ytrain=raw_data['ytrain'],
-                     strain=raw_data['strain'], xtest=raw_data['xtrain'], ytest=raw_data['ytrain'],
-                     stest=raw_data['strain'])
+
+            # Split the training data into train and dev and save it to `data.npz`
+            train_dev_data = _split_train_dev(raw_data['xtrain'], raw_data['ytrain'], raw_data['strain'])
+            np.savez(tmp_path / Path("data.npz"), **train_dev_data)
 
             # First run
             flags = _flags(parameters, tmpdir, self.s_as_input, model_name, raw_data['ytrain'].shape[0])
@@ -192,7 +192,7 @@ class UGPEqOpp(UGP):
             # Read the results from the numpy file 'predictions.npz'
             prediction_on_train = np.load(tmp_path / Path(model_name) / Path("predictions.npz"))
             preds = (prediction_on_train['pred_mean'] > 0.5).astype(int)
-            odds = _compute_odds(raw_data['ytrain'], preds, raw_data['strain'])
+            odds = _compute_odds(train_dev_data['ytest'], preds, train_dev_data['stest'])
 
             # Enforce equality of opportunity
             opportunity = min(odds['p_ybary1_s0'], odds['p_ybary1_s1'])
@@ -269,6 +269,30 @@ def fix_labels(labels, positive_class_val):
             return 2 - label
         return [2 - y for y in labels], _converter
     raise ValueError("Labels have unknown structure")
+
+
+def _split_train_dev(inputs, labels, sensitive):
+    n = inputs.shape[0]
+    idx_s0_y0 = np.where((sensitive == 0) & (labels == 0))[0]
+    idx_s0_y1 = np.where((sensitive == 0) & (labels == 1))[0]
+    idx_s1_y0 = np.where((sensitive == 1) & (labels == 0))[0]
+    idx_s1_y1 = np.where((sensitive == 1) & (labels == 1))[0]
+
+    train_fraction = []
+    test_fraction = []
+    for a in [idx_s0_y0, idx_s0_y1, idx_s1_y0, idx_s1_y1]:
+        np.random.shuffle(a)
+
+        split_idx = int(len(a) * 0.5) + 1  # make sure the train part is at least half
+        train_fraction_a = a[:split_idx]
+        test_fraction_a = a[split_idx:]
+        train_fraction += list(train_fraction_a)
+        test_fraction += list(test_fraction_a)
+    xtrain, ytrain, strain = inputs[train_fraction], labels[train_fraction], sensitive[train_fraction]
+    # ensure that the train set has exactly the same size as the given set (otherwise inducing inputs has wrong shape)
+    return dict(xtrain=np.concatenate((xtrain, xtrain))[:n], ytrain=np.concatenate((ytrain, ytrain))[:n],
+                strain=np.concatenate((strain, strain))[:n], xtest=inputs[test_fraction], ytest=labels[test_fraction],
+                stest=sensitive[test_fraction])
 
 
 def _flags(additional, save_dir, s_as_input, model_name, num_train):
