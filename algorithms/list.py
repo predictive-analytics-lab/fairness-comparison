@@ -14,17 +14,23 @@ from metrics.DIAvgAll import DIAvgAll
 from metrics.Accuracy import Accuracy
 from metrics.MCC import MCC
 
-ALGORITHMS = [FairGPAlgorithm(s_as_input=True),
-              SVM(),
-              GaussianNB(),
-              LogisticRegression(),
-              DecisionTree(),
-              CaldersAlgorithm(),
-              KamishimaAlgorithm(),
-              FeldmanAlgorithm(SVM()), FeldmanAlgorithm(GaussianNB()),       # Feldman
-              FeldmanAlgorithm(LogisticRegression()), FeldmanAlgorithm(DecisionTree()),
-              ZafarAlgorithmFairness(), ZafarAlgorithmAccuracy(),
-              ZafarEOAlgorithmOpp(), ZafarEOAlgorithmOdd()]
+ALGORITHMS = [
+    UGP(s_as_input=True),
+    UGP(s_as_input=False),
+    UGPEqOpp(s_as_input=True),
+    UGPEqOpp(s_as_input=False),
+    SVM(),
+    # GaussianNB(),
+    # LogisticRegression(),
+    # DecisionTree(),
+    # CaldersAlgorithm(),
+    # KamishimaAlgorithm(),
+    # FeldmanAlgorithm(SVM()), FeldmanAlgorithm(GaussianNB()),       # Feldman
+    # FeldmanAlgorithm(LogisticRegression()), FeldmanAlgorithm(DecisionTree()),
+    # ZafarAlgorithmFairness(), ZafarAlgorithmAccuracy(),
+    ZafarEOAlgorithmOpp(),
+    # ZafarEOAlgorithmOdd(),
+]
 
 # ALGORITHMS = [UniversalGPAlgorithm(s_as_input=True)]     # baseline
 
@@ -42,4 +48,3 @@ ALGORITHMS = [FairGPAlgorithm(s_as_input=True),
 #    ParamGridSearch(FeldmanAlgorithm(SVM()), Accuracy()),
 #    ParamGridSearch(FeldmanAlgorithm(GaussianNB()), DIAvgAll()),
 #    ParamGridSearch(FeldmanAlgorithm(GaussianNB()), Accuracy())
-
