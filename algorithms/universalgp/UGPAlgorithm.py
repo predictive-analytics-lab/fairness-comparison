@@ -10,8 +10,8 @@ from ..Algorithm import Algorithm
 
 UGP_PATH = "/home/ubuntu/code/UniversalGP/gaussian_process.py"  # TODO: find a better way to specify the path
 USE_EAGER = False
-EPOCHS = 500
-MAX_TRAIN_STEPS = 20000
+EPOCHS = 150
+MAX_TRAIN_STEPS = 10000
 BATCH_SIZE = 50
 
 
