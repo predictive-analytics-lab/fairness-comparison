@@ -1,4 +1,5 @@
 """Code for calling UniversalGP"""
+import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from subprocess import call
@@ -315,7 +316,7 @@ def _flags(additional, save_dir, s_as_input, model_name, num_train):
         save_dir=save_dir,  # "/home/ubuntu/out2/",
         plot='',
         logging_steps=100,
-        gpus='0',
+        gpus=f"{int(sys.argv[1])}" if len(sys.argv) > 1 else '0',
         preds_path='predictions.npz',  # save the predictions into `predictions.npz`
         num_components=1,
         num_samples=1000,
