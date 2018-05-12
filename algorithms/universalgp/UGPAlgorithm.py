@@ -9,6 +9,9 @@ from ..Algorithm import Algorithm
 
 UGP_PATH = "/home/ubuntu/code/UniversalGP/gaussian_process.py"  # TODO: find a better way to specify the path
 USE_EAGER = False
+EPOCHS = 500
+MAX_TRAIN_STEPS = 20000
+BATCH_SIZE = 50
 
 
 class UGP(Algorithm):
@@ -60,7 +63,7 @@ class UGP(Algorithm):
             # Construct and execute command
             model_name = "local"  # f"run{self.counter}_s_as_input_{self.s_as_input}"
             cmd = f"python {UGP_PATH} "
-            for key, value in _flags(parameters, tmpdir, self.s_as_input, model_name).items():
+            for key, value in _flags(parameters, tmpdir, self.s_as_input, model_name, len(raw_data['ytrain'])).items():
                 if isinstance(value, str):
                     cmd += f" --{key}='{value}'"
                 else:
@@ -191,7 +194,7 @@ def fix_labels(labels, positive_class_val):
     raise ValueError("Labels have unknown structure")
 
 
-def _flags(additional, save_dir, s_as_input, model_name):
+def _flags(additional, save_dir, s_as_input, model_name, num_train):
     return {**dict(
         tf_mode='eager' if USE_EAGER else 'graph',
         data='sensitive_from_numpy',
@@ -199,11 +202,11 @@ def _flags(additional, save_dir, s_as_input, model_name):
         cov='SquaredExponential',
         lr=0.005,
         model_name=model_name,
-        batch_size=50,
-        train_steps=1000,
-        eval_epochs=10000,
-        summary_steps=5000,
-        chkpnt_steps=5000,
+        batch_size=BATCH_SIZE,
+        train_steps=min(MAX_TRAIN_STEPS, num_train * EPOCHS // BATCH_SIZE),
+        eval_epochs=100000,
+        summary_steps=100000,
+        chkpnt_steps=100000,
         save_dir=save_dir,  # "/home/ubuntu/out2/",
         plot='',
         logging_steps=100,
