@@ -21,14 +21,13 @@ def get_algorithm_names():
     return result
 
 
-def run(num_trials=NUM_TRIALS_DEFAULT,
-        dataset=get_dataset_names(),
-        algorithm=get_algorithm_names()):
-    algorithms_to_run = algorithm
+def run(gpu=0, num_trials=NUM_TRIALS_DEFAULT, datasets=get_dataset_names(),
+        algorithms=get_algorithm_names()):
+    algorithms_to_run = algorithms
 
-    print("Datasets: '%s'" % dataset)
+    print("Datasets: '%s'" % datasets)
     for dataset_obj in DATASETS:
-        if not dataset_obj.get_dataset_name() in dataset:
+        if not dataset_obj.get_dataset_name() in datasets:
             continue
 
         print("\nEvaluating dataset:" + dataset_obj.get_dataset_name())
