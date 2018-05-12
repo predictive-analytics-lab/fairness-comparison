@@ -8,7 +8,8 @@ import numpy as np
 
 from ..Algorithm import Algorithm
 
-UGP_PATH = "/home/ubuntu/code/UniversalGP/gaussian_process.py"  # TODO: find a better way to specify the path
+# TODO: find a better way to specify the path
+UGP_PATH = "/home/ubuntu/code/UniversalGP/gaussian_process.py"
 USE_EAGER = False
 EPOCHS = 150
 MAX_TRAIN_STEPS = 10000
@@ -28,25 +29,27 @@ class UGP(Algorithm):
 
     def run(self, *data):
         """
-        Runs the algorithm and returns the predicted classifications on the test set.  The given train and test data
-        still contains the sensitive_attrs.  This run of the algorithm should focus on the single given sensitive
-        attribute.
+        Runs the algorithm and returns the predicted classifications on the test set.  The given
+        train and test data still contains the sensitive_attrs. This run of the algorithm should
+        focus on the single given sensitive attribute.
 
-        Be sure that the returned predicted classifications are of the same type as the class attribute in the given
-        test_df.  If this is not the case, some metric analyses may fail to appropriately compare the returned
-        predictions to their desired values.
+        Be sure that the returned predicted classifications are of the same type as the class
+        attribute in the given test_df. If this is not the case, some metric analyses may fail to
+        appropriately compare the returned predictions to their desired values.
 
         Args:
             train_df: Pandas datafram with the training data
             test_df: Pandas datafram with the test data
             class_attr: string that names the column with the label
-            positive_class_val: the value for the label which is considered the positive class (usually '1')
-            sensitive_attrs: list of all available sensitive attributes (all but one should be ignored)
-            single_sensitive: string that names the sensitive attribute that is considered in this run
+            positive_class_val: the value for the label which is considered the positive class
+                (usually '1')
+            sensitive_attrs: list of all available sensitive attributes (all but one should be
+                ignored)
+            single_sensitive: name of the sensitive attribute that is considered in this run
             privileged_vals: the groups that are considered privileged (usually '1')
-            params: a dictionary mapping from algorithm-specific parameter names to the desired values.
-                If the implementation of run uses different values, these should be modified in the params
-                dictionary as a way of returning the used values to the caller.
+            params: a dictionary mapping from algorithm-specific parameter names to the desired
+                values. If the implementation of run uses different values, these should be modified
+                in the params dictionary as a way of returning the used values to the caller.
         """
         self.counter += 1
         # Separate the data and make sure the labels are either 0 or 1
@@ -63,7 +66,8 @@ class UGP(Algorithm):
 
             # Construct and execute command
             model_name = "local"  # f"run{self.counter}_s_as_input_{self.s_as_input}"
-            self.run_ugp(_flags(parameters, tmpdir, self.s_as_input, model_name, raw_data['ytrain'].shape[0]))
+            self.run_ugp(_flags(parameters, tmpdir, self.s_as_input, model_name,
+                         raw_data['ytrain'].shape[0]))
 
             # Read the results from the numpy file 'predictions.npz'
             output = np.load(tmp_path / Path(model_name) / Path("predictions.npz"))
@@ -86,9 +90,9 @@ class UGP(Algorithm):
     @staticmethod
     def get_param_info():
         """
-        Returns a dictionary mapping algorithm parameter names to a list of parameter values to be explored. This
-        function should only be implemented if the algorithm has specific parameters that should be tuned, e.g., for
-        trading off between fairness and accuracy.
+        Returns a dictionary mapping algorithm parameter names to a list of parameter values to be
+        explored. This function should only be implemented if the algorithm has specific parameters
+        that should be tuned, e.g., for trading off between fairness and accuracy.
         """
         return dict(s_as_input=[True, False])
 
@@ -99,17 +103,18 @@ class UGP(Algorithm):
 
     def get_name(self):
         """
-        Returns the name for the algorithm. This must be a unique name, so it is suggested that this name is simply
-        <firstauthor>. If there are mutliple algorithms by the same author(s), a suggested modification is
-        <firstauthor-algname>. This name will appear in the resulting CSVs and graphs created when performing
-        benchmarks and analysis.
+        Returns the name for the algorithm. This must be a unique name, so it is suggested that this
+        name is simply <firstauthor>. If there are mutliple algorithms by the same author(s), a
+        suggested modification is <firstauthor-algname>. This name will appear in the resulting CSVs
+        and graphs created when performing benchmarks and analysis.
         """
         return self.name
 
     def get_default_params(self):
         """
-        Returns a dictionary mapping from parameter names to default values that should be used with the algorithm. If
-        not implemented by a specific algorithm, this returns the empty dictionary.
+        Returns a dictionary mapping from parameter names to default values that should be used with
+        the algorithm. If not implemented by a specific algorithm, this returns the empty
+        dictionary.
         """
         return dict(s_as_input=self.s_as_input)
 
@@ -121,8 +126,9 @@ class UGP(Algorithm):
 
     def _save_in_json(self, save_path):
         """Save the settings in a JSON file called 'settings.json'"""
-        with open(save_path / Path("settings.json"), 'w') as fp:
-            json.dump(dict(s_as_input=self.s_as_input, counter=self.counter), fp, ensure_ascii=False, indent=2)
+        with open(save_path / Path("settings.json"), 'w') as f:
+            data = dict(s_as_input=self.s_as_input, counter=self.counter)
+            json.dump(data, f, ensure_ascii=False, indent=2)
 
 
 class UGPDemPar(UGP):
@@ -139,10 +145,10 @@ class UGPDemPar(UGP):
         self.average_prediction = average_prediction
 
     def _additional_parameters(self, raw_data):
-        biased_acceptance1, biased_acceptance2 = compute_bias(raw_data['ytrain'], raw_data['strain'])
+        biased_acceptance = compute_bias(raw_data['ytrain'], raw_data['strain'])
 
         if self.target_acceptance is None:
-            target_rate = .5 * (biased_acceptance1 + biased_acceptance2)
+            target_rate = .5 * (biased_acceptance[0] + biased_acceptance[1])
         else:
             target_rate = self.target_acceptance
 
@@ -150,8 +156,8 @@ class UGPDemPar(UGP):
             inf='VariationalYbar',
             target_rate1=target_rate,
             target_rate2=target_rate,
-            biased_acceptance1=biased_acceptance1,
-            biased_acceptance2=biased_acceptance2,
+            biased_acceptance1=biased_acceptance[0],
+            biased_acceptance2=biased_acceptance[1],
             probs_from_flipped=False,
             average_prediction=self.average_prediction,
         )
@@ -164,7 +170,7 @@ class UGPEqOpp(UGP):
         self.name = f"UGP_eq_opp_in_{s_as_input}"
 
     def _additional_parameters(self, raw_data):
-        biased_acceptance1, biased_acceptance2 = compute_bias(raw_data['ytrain'], raw_data['strain'])
+        biased_acceptance = compute_bias(raw_data['ytrain'], raw_data['strain'])
 
         return dict(
             inf='VariationalYbarEqOdds',
@@ -172,8 +178,8 @@ class UGPEqOpp(UGP):
             p_ybary0_s1=1.0,
             p_ybary1_s0=1.0,
             p_ybary1_s1=1.0,
-            biased_acceptance1=biased_acceptance1,
-            biased_acceptance2=biased_acceptance2,
+            biased_acceptance1=biased_acceptance[0],
+            biased_acceptance2=biased_acceptance[1],
         )
 
     def run(self, *data):
@@ -187,11 +193,12 @@ class UGPEqOpp(UGP):
             model_name = "local"  # f"run{self.counter}_s_as_input_{self.s_as_input}"
 
             # Split the training data into train and dev and save it to `data.npz`
-            train_dev_data = _split_train_dev(raw_data['xtrain'], raw_data['ytrain'], raw_data['strain'])
+            train_dev_data = _split_train_dev(raw_data['xtrain'], raw_data['ytrain'],
+                                              raw_data['strain'])
             np.savez(tmp_path / Path("data.npz"), **train_dev_data)
 
             # First run
-            flags = _flags(parameters, tmpdir, self.s_as_input, model_name, raw_data['ytrain'].shape[0])
+            flags = _flags(parameters, tmpdir, self.s_as_input, model_name, len(raw_data['ytrain']))
             self.run_ugp(flags)
 
             # Read the results from the numpy file 'predictions.npz'
@@ -219,20 +226,21 @@ class UGPEqOpp(UGP):
         return label_converter((pred_mean > 0.5).astype(raw_data['ytest'].dtype)[:, 0]), []
 
 
-def _prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_attrs, single_sensitive,
-                  privileged_vals, params):
+def _prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
+                  single_sensitive, privileged_vals, params):
     # Separate data
     sensitive = [df[single_sensitive].values[:, np.newaxis] for df in [train_df, test_df]]
     label = [df[class_attr].values[:, np.newaxis] for df in [train_df, test_df]]
-    nosensitive = [df.drop(columns=sensitive_attrs).drop(columns=class_attr).values for df in [train_df, test_df]]
+    nosensitive = [df.drop(columns=sensitive_attrs).drop(columns=class_attr).values
+                   for df in [train_df, test_df]]
 
     # Check sensitive attributes
     assert list(np.unique(sensitive[0])) == [0, 1] or list(np.unique(sensitive[0])) == [0., 1.]
 
     # Check labels
     label, label_converter = fix_labels(label, positive_class_val)
-    return dict(xtrain=nosensitive[0], xtest=nosensitive[1], ytrain=label[0], ytest=label[1], strain=sensitive[0],
-                stest=sensitive[1]), label_converter
+    return dict(xtrain=nosensitive[0], xtest=nosensitive[1], ytrain=label[0], ytest=label[1],
+                strain=sensitive[0], stest=sensitive[1]), label_converter
 
 
 def compute_bias(labels, sensitive):
@@ -243,7 +251,7 @@ def compute_bias(labels, sensitive):
 
 
 def _compute_odds(labels, predictions, sensitive):
-    """Compute the bias in the predictions with respect to the sensitive attributes and the labels"""
+    """Compute the bias in the predictions with respect to the sensitive attr. and the labels"""
     return dict(
         p_ybary0_s0=np.mean(predictions[np.logical_and(labels == 0, sensitive == 0)] == 0),
         p_ybary1_s0=np.mean(predictions[np.logical_and(labels == 1, sensitive == 0)] == 1),
@@ -293,11 +301,14 @@ def _split_train_dev(inputs, labels, sensitive):
         test_fraction_a = a[split_idx:]
         train_fraction += list(train_fraction_a)
         test_fraction += list(test_fraction_a)
-    xtrain, ytrain, strain = inputs[train_fraction], labels[train_fraction], sensitive[train_fraction]
-    # ensure that the train set has exactly the same size as the given set (otherwise inducing inputs has wrong shape)
-    return dict(xtrain=np.concatenate((xtrain, xtrain))[:n], ytrain=np.concatenate((ytrain, ytrain))[:n],
-                strain=np.concatenate((strain, strain))[:n], xtest=inputs[test_fraction], ytest=labels[test_fraction],
-                stest=sensitive[test_fraction])
+    xtrain, ytrain, strain = (inputs[train_fraction], labels[train_fraction],
+                              sensitive[train_fraction])
+    # ensure that the train set has exactly the same size as the given set
+    # (otherwise inducing inputs has wrong shape)
+    return dict(xtrain=np.concatenate((xtrain, xtrain))[:n],
+                ytrain=np.concatenate((ytrain, ytrain))[:n],
+                strain=np.concatenate((strain, strain))[:n], xtest=inputs[test_fraction],
+                ytest=labels[test_fraction], stest=sensitive[test_fraction])
 
 
 def _flags(additional, save_dir, s_as_input, model_name, num_train):
