@@ -121,13 +121,16 @@ class UGP(Algorithm):
 
 class UGPDemPar(UGP):
     """GP algorithm which enforces demographic parity"""
-    def __init__(self, s_as_input=True, target_acceptance=None):
+    def __init__(self, s_as_input=True, target_acceptance=None, average_prediction=False):
         super().__init__(s_as_input=s_as_input)
-        if target_acceptance is None:
-            self.name = f"UGP_dem_par_in_{s_as_input}"
+        if s_as_input and average_prediction:
+            self.name = "UGP_dem_par_av_True"
         else:
-            self.name = f"UGP_dem_par_in_{s_as_input}_tar_{target_acceptance}"
+            self.name = f"UGP_dem_par_in_{s_as_input}"
+        if target_acceptance is not None:
+            self.name += f"tar_{target_acceptance}"
         self.target_acceptance = target_acceptance
+        self.average_prediction = average_prediction
 
     def _additional_parameters(self, raw_data):
         biased_acceptance1, biased_acceptance2 = compute_bias(raw_data['ytrain'], raw_data['strain'])
@@ -144,6 +147,7 @@ class UGPDemPar(UGP):
             biased_acceptance1=biased_acceptance1,
             biased_acceptance2=biased_acceptance2,
             probs_from_flipped=False,
+            average_prediction=self.average_prediction,
         )
 
 
