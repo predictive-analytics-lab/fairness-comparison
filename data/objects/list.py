@@ -5,6 +5,7 @@ from data.objects.German import German
 from data.objects.PropublicaRecidivism import PropublicaRecidivism
 from data.objects.PropublicaViolentRecidivism import PropublicaViolentRecidivism
 from data.objects.TwoGaussians import TwoGaussians
+from .FlippedLabels import FlippedLabels
 
 DATASETS = [
     TwoGaussians(),
@@ -13,6 +14,7 @@ DATASETS = [
     German(),
     PropublicaRecidivism(),
     PropublicaViolentRecidivism(),
+    # FlippedLabels(),
 ]
 
 # For testing, you can just use a sample of the data.  E.g.:
