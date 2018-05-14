@@ -14,7 +14,7 @@ DATASETS = [
     German(),
     PropublicaRecidivism(),
     PropublicaViolentRecidivism(),
-    # FlippedLabels(),
+    FlippedLabels(),
 ]
 
 # For testing, you can just use a sample of the data.  E.g.:
