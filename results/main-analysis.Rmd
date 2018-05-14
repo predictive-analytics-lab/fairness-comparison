@@ -116,14 +116,16 @@ nb_measure_comparison = function(name, measure) {
 algos_to_plot = c(
   "ZafarFairness", "Calders", "SVM", 
   "Feldman-SVM", "DecisionTree", 
-  "Feldman-DecisionTree", "Kamishima","FairGP_input_True", "GP_input_True", "ZafarEqOpp", "ZafarEqOdd")
+  "Feldman-DecisionTree", "Kamishima", 
+  "UGP_in_True", "UGP_dem_par_in_True",
+  "ZafarEqOpp", "ZafarEqOdd")
 
-make_scatter_figure = function(name, var1="CV", var2="accuracy", display="off") {
+make_scatter_figure = function(name, var1="CV", var2="accuracy", algos_plot=algos_to_plot, display="off") {
   x_var = as.name(var1)
   y_var = as.name(var2)
 
   df = read.csv(str_c(name, "_numerical-binsensitive.csv"), check.names=FALSE) %>%
-    filter(algorithm %in% algos_to_plot) %>%
+    filter(algorithm %in% algos_plot) %>%
     mutate(algorithm=recode(algorithm, ZafarFairness="Zafar")) # rename to Zafar for clarity
 
   # Scatterplot
@@ -139,16 +141,25 @@ make_scatter_figure = function(name, var1="CV", var2="accuracy", display="off") 
   )
 }
 
-```
+# plot box
+plot_sensitivity = function(df, var1, var2) {
+  x_var = as.name(var1)
+  y_var = as.name(var2)
 
-## Algorithm accuracy vs fairness (CV, DIbinary, group-TPRDiff)
+  sensitivity_summary = create_sensitivity_summary(df, !!x_var, !!y_var)
+  basic_plot = basic_sensitivity_plot(sensitivity_summary, !!x_var, !!y_var)
+  plot_rects_sensitivity_summary(basic_plot)
+}
 
-```{r}
-all_in_1 = "CV"
-all_in_2 = "DIbinary"
-all_in_3 = "TPRDiff"
-target = "accuracy"
+make_sensitivity_figure = function(name, var1="DIbinary", var2="accuracy", algos_plot=algos_to_plot) {
+  df = read.csv(name, check.names=FALSE) %>%
+    filter(algorithm %in% algos_plot) %>%
+    mutate(algorithm=recode(algorithm, ZafarFairness="Zafar")) # rename to Zafar for clarity
 
+  plot_sensitivity(df, var1, var2)
+}
+
+# dataset setting
 file_name = list("adult_race", "adult_sex", "german_age", "german_sex",
                 "propublica-recidivism_race","propublica-recidivism_sex", 
                 "propublica-violent-recidivism_race", "propublica-violent-recidivism_sex",
@@ -159,15 +170,48 @@ file_attribute = list("race", "sex", "age", "sex",
                       "race", "sensitive-attr")
 N_file = length(file_name)
 
+```
+
+## Algorithm accuracy vs fairness (CV, DIbinary, group-TPRDiff)
+
+```{r}
+variable_1 = "CV"
+add_for_1 = 0
+variable_2 = "DIbinary"
+add_for_2 = 0
+variable_3 = "TPRDiff"
+add_for_3 = 1
+target = "accuracy"
+add_for_target = 0
+
 for (i in 1:N_file) {
-  q_CV = make_scatter_figure(file_name[i], var1=all_in_1, var2=target, display = "title")
-  q_DI = make_scatter_figure(file_name[i], var1=all_in_2, var2=target, display = "off")
-  var_name = paste(file_attribute[i], "-", all_in_3, sep="")
-  q_diff = make_scatter_figure(file_name[i], var1=var_name, var2=target, display = "captain")
-  q = ggarrange(q_CV, q_DI, q_diff, ncol=1, nrow=3, common.legend = TRUE, legend="right")
+  if(add_for_target){
+    target_name = paste(file_attribute[i], "-", target, sep="")
+  } else {
+    target_name = target
+  }
+  if(add_for_1){
+    var1_name = paste(file_attribute[i], "-", variable_1, sep="")
+  } else {
+    var1_name = variable_1
+  }
+  q_1 = make_scatter_figure(file_name[i], var1=var1_name, var2=target_name, display = "title")
+  if(add_for_2){
+    var2_name = paste(file_attribute[i], "-", variable_2, sep="")
+  } else {
+    var2_name = variable_2
+  }
+  q_2 = make_scatter_figure(file_name[i], var1=var2_name, var2=target_name, display = "off")
+  if(add_for_3){
+    var3_name = paste(file_attribute[i], "-", variable_3, sep="")
+  } else {
+    var3_name = variable_3
+  }
+  q_3 = make_scatter_figure(file_name[i], var1=var3_name, var2=target_name, display = "captain")
+  q = ggarrange(q_1, q_2, q_3, ncol=1, nrow=3, common.legend = TRUE, legend="right")
   print(q)
   export_name = paste("AWS-result/", file_name[i], "_fair.png", sep="")
-  ggsave(export_name, q)
+#  ggsave(export_name, q)
 }
 
 ```
@@ -176,34 +220,80 @@ for (i in 1:N_file) {
 
 ```{r}
 variable_1 = "TPRDiff"
+add_for_1 = 1
+
 variable_2 = "accuracy"
-
-plot_sensitivity = function(df, var1, var2) {
-  x_var = as.name(var1)
-  y_var = as.name(var2)
-
-  sensitivity_summary = create_sensitivity_summary(df, !!x_var, !!y_var)
-  basic_plot = basic_sensitivity_plot(sensitivity_summary, !!x_var, !!y_var)
-  plot_rects_sensitivity_summary(basic_plot)
-}
-
-make_sensitivity_figure = function(name, var1="DIbinary", var2="accuracy") {
-  df = read.csv(name, check.names=FALSE) %>%
-    filter(algorithm %in% algos_to_plot) %>%
-    mutate(algorithm=recode(algorithm, ZafarFairness="Zafar")) # rename to Zafar for clarity
-
-  plot_sensitivity(df, var1, var2)
-}
+add_for_2 = 0
 
 for (i in 1:N_file) {
   temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="")
-  var1_name = paste(file_attribute[i], "-", variable_1, sep="")
-  p = make_sensitivity_figure(temp_name, var1 = var1_name, var2 = variable_2) +
+  if(add_for_1){
+    var1_name = paste(file_attribute[i], "-", variable_1, sep="")
+  } else {
+    var1_name = variable_1
+  }
+  if(add_for_2){
+    var2_name = paste(file_attribute[i], "-", variable_2, sep="")
+  } else {
+    var2_name = variable_2
+  }
+  p = make_sensitivity_figure(temp_name, var1 = var1_name, var2 = var2_name) +
   ggtitle(paste(file_name[i], "dataset,", file_attribute[i], "attribute"))
   print(p)
   export_name = paste("AWS-result/", file_name[i], "-", variable_1, "-", variable_2, "_fair.png", sep="")
-  ggsave(export_name, p)
+#  ggsave(export_name, p)
 }
 
 ```
+## Algorithm independence/separation vs sufficiency (DIbinary/group-TPRDiff vs calibration)
 
+```{r}
+variable_1 = "DIbinary"
+add_for_1 = 0
+variable_2 = "TPRDiff"
+add_for_2 = 1
+target = "calibration+"
+add_for_target = 1
+
+for (i in 1:N_file) {
+  if(add_for_target){
+    target_name = paste(file_attribute[i], "-", target, sep="")
+  } else {
+    target_name = target
+  }
+  if(add_for_1){
+    var1_name = paste(file_attribute[i], "-", variable_1, sep="")
+  } else {
+    var1_name = variable_1
+  }
+  q_1 = make_scatter_figure(file_name[i], var1=var1_name, var2=target_name, display = "title")
+  
+  if(add_for_2){
+    var2_name = paste(file_attribute[i], "-", variable_2, sep="")
+  } else {
+    var2_name = variable_2
+  }
+  q_2 = make_scatter_figure(file_name[i], var1=var2_name, var2=target_name, display = "captain")
+  q = ggarrange(q_1, q_2, ncol=1, nrow=2, common.legend = TRUE, legend="right")
+  print(q)
+  export_name = paste("AWS-result/", file_name[i], "_sufficiency.png", sep="")
+#  ggsave(export_name, q)
+}
+
+```
+## Algorithm 0-PR vs 1-PR
+
+```{r}
+method_plot = c("UGP_dem_par_in_True")
+variable_1 = "0-PR"
+variable_2 = "1-PR"
+
+for (i in 1:N_file) {
+  var1_name = paste(variable_1, "-", file_attribute[i], sep="")
+  var2_name = paste(variable_2, "-", file_attribute[i], sep="")
+  q = make_scatter_figure(file_name[i], var1=var1_name, var2=var2_name, algos_plot=method_plot, display = "all")
+  print(q)
+  export_name = paste("AWS-result/", file_name[i], "_PR.png", sep="")
+#  ggsave(export_name, q)
+}
+```
