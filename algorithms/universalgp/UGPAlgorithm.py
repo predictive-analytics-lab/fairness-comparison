@@ -353,4 +353,4 @@ def _num_epochs(num_train):
     num_train == 10,000 => num_epochs == 40
     num_train == 16,000,000 => num_epochs == 1
     """
-    return 4000 / np.sqrt(num_train)
+    return int(4000 / np.sqrt(num_train))
