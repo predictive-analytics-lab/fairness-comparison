@@ -11,7 +11,6 @@ from ..Algorithm import Algorithm
 # TODO: find a better way to specify the path
 UGP_PATH = "/home/ubuntu/code/UniversalGP/gaussian_process.py"
 USE_EAGER = False
-EPOCHS = 150
 MAX_TRAIN_STEPS = 10000
 BATCH_SIZE = 50
 
@@ -165,9 +164,13 @@ class UGPDemPar(UGP):
 
 class UGPEqOpp(UGP):
     """GP algorithm which enforces equality of opportunity"""
-    def __init__(self, s_as_input=True):
+    def __init__(self, s_as_input=True, average_prediction=False):
         super().__init__(s_as_input=s_as_input)
-        self.name = f"UGP_eq_opp_in_{s_as_input}"
+        if s_as_input and average_prediction:
+            self.name = "UGP_eq_opp_av_True"
+        else:
+            self.name = f"UGP_eq_opp_in_{s_as_input}"
+        self.average_prediction = average_prediction
 
     def _additional_parameters(self, raw_data):
         biased_acceptance = compute_bias(raw_data['ytrain'], raw_data['strain'])
@@ -180,6 +183,7 @@ class UGPEqOpp(UGP):
             p_ybary1_s1=1.0,
             biased_acceptance1=biased_acceptance[0],
             biased_acceptance2=biased_acceptance[1],
+            average_prediction=self.average_prediction,
         )
 
     def run(self, *data):
@@ -320,7 +324,7 @@ def _flags(additional, save_dir, s_as_input, model_name, num_train):
         lr=0.005,
         model_name=model_name,
         batch_size=BATCH_SIZE,
-        train_steps=min(MAX_TRAIN_STEPS, num_train * EPOCHS // BATCH_SIZE),
+        train_steps=min(MAX_TRAIN_STEPS, num_train * _num_epochs(num_train) // BATCH_SIZE),
         eval_epochs=100000,
         summary_steps=100000,
         chkpnt_steps=100000,
@@ -340,3 +344,13 @@ def _flags(additional, save_dir, s_as_input, model_name, num_train):
         num_samples_pred=2000,
         s_as_input=s_as_input,
     ), **additional}
+
+
+def _num_epochs(num_train):
+    """Adaptive number of epochs
+
+    num_train == 100 => num_epochs == 400
+    num_train == 10,000 => num_epochs == 40
+    num_train == 16,000,000 => num_epochs == 1
+    """
+    return 4000 / np.sqrt(num_train)
