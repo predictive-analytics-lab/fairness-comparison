@@ -163,11 +163,11 @@ make_sensitivity_figure = function(name, var1="DIbinary", var2="accuracy", algos
 file_name = list("adult_race", "adult_sex", "german_age", "german_sex",
                 "propublica-recidivism_race","propublica-recidivism_sex", 
                 "propublica-violent-recidivism_race", "propublica-violent-recidivism_sex",
-                "ricci_race", "two-gaussians_sensitive-attr")
+                "ricci_race", "two-gaussians_sensitive-attr", "flipped-labels_sensitive-attr")
 file_attribute = list("race", "sex", "age", "sex",
                       "race", "sex", 
                       "race", "sex", 
-                      "race", "sensitive-attr")
+                      "race", "sensitive-attr", "sensitive-attr")
 N_file = length(file_name)
 
 ```
