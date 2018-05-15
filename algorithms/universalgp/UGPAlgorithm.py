@@ -133,22 +133,40 @@ class UGP(Algorithm):
 
 class UGPDemPar(UGP):
     """GP algorithm which enforces demographic parity"""
-    def __init__(self, s_as_input=True, target_acceptance=None, average_prediction=False):
+    MEAN = 1
+    MIN = 2
+    MAX = 3
+
+    def __init__(self, s_as_input=True, target_acceptance=None, average_prediction=False,
+                 target_mode=MEAN):
         super().__init__(s_as_input=s_as_input)
         if s_as_input and average_prediction:
             self.name = "UGP_dem_par_av_True"
         else:
             self.name = f"UGP_dem_par_in_{s_as_input}"
         if target_acceptance is not None:
-            self.name += f"tar_{target_acceptance}"
+            self.name += f"_tar_{target_acceptance}"
+        elif target_mode != self.MEAN:
+            if target_mode == self.MIN:
+                self.name += "_tar_min"
+            elif target_mode == self.MAX:
+                self.name += "_tar_max"
+            else:
+                raise ValueError(f"invalid target: '{target_mode}'")
         self.target_acceptance = target_acceptance
+        self.target_mode = target_mode
         self.average_prediction = average_prediction
 
     def _additional_parameters(self, raw_data):
         biased_acceptance = compute_bias(raw_data['ytrain'], raw_data['strain'])
 
         if self.target_acceptance is None:
-            target_rate = .5 * (biased_acceptance[0] + biased_acceptance[1])
+            if self.target_mode == self.MEAN:
+                target_rate = .5 * (biased_acceptance[0] + biased_acceptance[1])
+            elif self.target_mode == self.MIN:
+                target_rate = min(biased_acceptance[0], biased_acceptance[1])
+            elif self.target_mode == self.MAX:
+                target_rate = max(biased_acceptance[0], biased_acceptance[1])
         else:
             target_rate = self.target_acceptance
 
@@ -358,4 +376,4 @@ def _num_epochs(num_train):
     num_train == 10,000 => num_epochs == 50
     num_train == 25,000,000 => num_epochs == 1
     """
-    return int(5000 / np.sqrt(num_train))
+    return int(8000 / np.sqrt(num_train))
