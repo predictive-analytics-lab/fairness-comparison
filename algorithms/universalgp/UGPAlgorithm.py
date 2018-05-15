@@ -12,7 +12,8 @@ from ..Algorithm import Algorithm
 UGP_PATH = "/home/ubuntu/code/UniversalGP/gaussian_process.py"
 USE_EAGER = False
 MAX_TRAIN_STEPS = 10000
-BATCH_SIZE = 50
+MAX_BATCH_SIZE = 5000
+MAX_NUM_INDUCING = 5000
 
 
 class UGP(Algorithm):
@@ -316,6 +317,7 @@ def _split_train_dev(inputs, labels, sensitive):
 
 
 def _flags(additional, save_dir, s_as_input, model_name, num_train):
+    batch_size = min(MAX_BATCH_SIZE, num_train)
     return {**dict(
         tf_mode='eager' if USE_EAGER else 'graph',
         data='sensitive_from_numpy',
@@ -323,14 +325,14 @@ def _flags(additional, save_dir, s_as_input, model_name, num_train):
         cov='SquaredExponential',
         lr=0.005,
         model_name=model_name,
-        batch_size=BATCH_SIZE,
-        train_steps=min(MAX_TRAIN_STEPS, num_train * _num_epochs(num_train) // BATCH_SIZE),
+        batch_size=batch_size,
+        train_steps=min(MAX_TRAIN_STEPS, num_train * _num_epochs(num_train) // batch_size),
         eval_epochs=100000,
         summary_steps=100000,
         chkpnt_steps=100000,
         save_dir=save_dir,  # "/home/ubuntu/out2/",
         plot='',
-        logging_steps=100,
+        logging_steps=10,
         gpus=f"{int(sys.argv[1])}" if len(sys.argv) > 1 else '0',
         preds_path='predictions.npz',  # save the predictions into `predictions.npz`
         num_components=1,
@@ -338,19 +340,22 @@ def _flags(additional, save_dir, s_as_input, model_name, num_train):
         diag_post=False,
         optimize_inducing=True,
         use_loo=False,
+        # use_loo=True,
+        # loo_steps=10,
         length_scale=1.0,
         sf=1.0,
         iso=False,
         num_samples_pred=2000,
         s_as_input=s_as_input,
+        num_inducing=MAX_NUM_INDUCING,
     ), **additional}
 
 
 def _num_epochs(num_train):
     """Adaptive number of epochs
 
-    num_train == 100 => num_epochs == 400
-    num_train == 10,000 => num_epochs == 40
-    num_train == 16,000,000 => num_epochs == 1
+    num_train == 100 => num_epochs == 500
+    num_train == 10,000 => num_epochs == 50
+    num_train == 25,000,000 => num_epochs == 1
     """
-    return int(4000 / np.sqrt(num_train))
+    return int(5000 / np.sqrt(num_train))
