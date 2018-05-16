@@ -5,6 +5,7 @@ from numpy import random
 # TAGS = ["original", "numerical", "numerical-binsensitive", "categorical-binsensitive"]
 TAGS = ["numerical-binsensitive"]
 TRAINING_PERCENT = 2.0 / 3.0
+SEED = 1234  # the random seed
 
 
 class ProcessedData():
@@ -26,6 +27,7 @@ class ProcessedData():
             return self.splits
 
         class_attr = self.data.get_class_attribute()
+        random.seed(SEED)
         for _ in range(num):
             # we first shuffle a list of indices so that each subprocessed data
             # is split consistently
