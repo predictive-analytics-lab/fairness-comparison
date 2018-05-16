@@ -33,7 +33,7 @@ def run(gpu=0, num_trials=NUM_TRIALS_DEFAULT, datasets=get_dataset_names(),
         print("\nEvaluating dataset:" + dataset_obj.get_dataset_name())
 
         all_sensitive_attributes = dataset_obj.get_sensitive_attributes_with_joint()
-        for sensitive in all_sensitive_attributes:
+        for sensitive in dataset_obj.get_sensitive_attributes():
             processed_dataset = ProcessedData(dataset_obj)
             train_test_splits = processed_dataset.create_train_test_splits(num_trials, sensitive)
 
