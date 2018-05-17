@@ -183,13 +183,17 @@ class UGPDemPar(UGP):
 
 class UGPEqOpp(UGP):
     """GP algorithm which enforces equality of opportunity"""
-    def __init__(self, s_as_input=True, average_prediction=False):
+    def __init__(self, s_as_input=True, average_prediction=False, tpr=None):
         super().__init__(s_as_input=s_as_input)
         if s_as_input and average_prediction:
             self.name = "UGP_eq_opp_av_True"
         else:
             self.name = f"UGP_eq_opp_in_{s_as_input}"
+        if tpr is not None:
+            self.name += f"_tpr_{tpr}"
+
         self.average_prediction = average_prediction
+        self.tpr = tpr
 
     def _additional_parameters(self, raw_data):
         biased_acceptance = compute_bias(raw_data['ytrain'], raw_data['strain'])
@@ -214,31 +218,37 @@ class UGPEqOpp(UGP):
         with TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
             model_name = "local"  # f"run{self.counter}_s_as_input_{self.s_as_input}"
-
-            # Split the training data into train and dev and save it to `data.npz`
-            train_dev_data = _split_train_dev(raw_data['xtrain'], raw_data['ytrain'],
-                                              raw_data['strain'])
-            np.savez(tmp_path / Path("data.npz"), **train_dev_data)
-
-            # First run
             flags = _flags(parameters, tmpdir, self.s_as_input, model_name, len(raw_data['ytrain']))
-            self.run_ugp(flags)
 
-            # Read the results from the numpy file 'predictions.npz'
-            prediction_on_train = np.load(tmp_path / Path(model_name) / Path("predictions.npz"))
-            preds = (prediction_on_train['pred_mean'] > 0.5).astype(int)
-            odds = _compute_odds(train_dev_data['ytest'], preds, train_dev_data['stest'])
+            if self.tpr is None:
+                # Split the training data into train and dev and save it to `data.npz`
+                train_dev_data = _split_train_dev(raw_data['xtrain'], raw_data['ytrain'],
+                                                  raw_data['strain'])
+                np.savez(tmp_path / Path("data.npz"), **train_dev_data)
 
-            # Enforce equality of opportunity
-            opportunity = min(odds['p_ybary1_s0'], odds['p_ybary1_s1'])
-            odds['p_ybary1_s0'] = opportunity
-            odds['p_ybary1_s1'] = opportunity
+                # First run
+                self.run_ugp(flags)
+
+                # Read the results from the numpy file 'predictions.npz'
+                prediction_on_train = np.load(tmp_path / Path(model_name) / Path("predictions.npz"))
+                preds = (prediction_on_train['pred_mean'] > 0.5).astype(int)
+                odds = _compute_odds(train_dev_data['ytest'], preds, train_dev_data['stest'])
+
+                # Enforce equality of opportunity
+                opportunity = min(odds['p_ybary1_s0'], odds['p_ybary1_s1'])
+                odds['p_ybary1_s0'] = opportunity
+                odds['p_ybary1_s1'] = opportunity
+                flags.update({'train_steps': 2 * flags['train_steps'], **odds})
+            else:
+                flags.update({
+                    'p_ybary1_s0': self.tpr,
+                    'p_ybary1_s1': self.tpr,
+                })
 
             # Save with real test data
             np.savez(tmp_path / Path("data.npz"), **raw_data)
 
             # Second run
-            flags.update({'train_steps': 2 * flags['train_steps'], **odds})
             self.run_ugp(flags)
 
             # Read the results from the numpy file 'predictions.npz'
