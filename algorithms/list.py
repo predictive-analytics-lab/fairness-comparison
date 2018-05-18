@@ -27,6 +27,7 @@ ALGORITHMS = [
     UGPDemPar(s_as_input=True, average_prediction=True, target_mode=UGPDemPar.MAX),
     UGPDemPar(s_as_input=False, target_mode=UGPDemPar.MAX),
     UGPEqOpp(s_as_input=True),
+    UGPEqOpp(s_as_input=True, average_prediction=True),
     UGPEqOpp(s_as_input=False),
     SVM(),
     GaussianNB(),
