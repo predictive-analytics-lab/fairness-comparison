@@ -115,11 +115,8 @@ nb_measure_comparison = function(name, measure) {
 }
 
 algos_to_plot = c(
-  "ZafarFairness", "Calders", "SVM", 
-  "Feldman-SVM", "DecisionTree", 
-  "Feldman-DecisionTree", "Kamishima", 
-  "UGP_in_True", "UGP_dem_par_in_True",
-  "ZafarEqOpp", "ZafarEqOdd")
+  "SVM", "UGP_in_False", "UGP_eq_opp_in_True","UGP_eq_opp_in_False",
+  "ZafarEqOpp")
 
 make_scatter_figure = function(name, var1="race-TPRDiff", var2="accuracy", algos=algos_to_plot, display="off", statistic = "off") {
   x_var = as.name(var1)
@@ -127,7 +124,13 @@ make_scatter_figure = function(name, var1="race-TPRDiff", var2="accuracy", algos
   
   df = read.csv(str_c(name, "_numerical-binsensitive.csv"), check.names=FALSE) %>%
     filter(algorithm %in% algos) %>%
-    mutate(algorithm=recode(algorithm, ZafarFairness="Zafar")) # rename to Zafar for clarity
+    mutate(algorithm=recode(algorithm, "UGP_in_False"="GP"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_eq_opp_in_True"="FairGPopp*"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_eq_opp_in_False"="FairGPopp"))
+  
+  # df$algorithm <- revalue(df$algorithm, c("UGP_in_False"="GP"))
+  # df$algorithm <- revalue(df$algorithm, c("UGP_eq_opp_in_True"="FairGPopp*"))
+  # df$algorithm <- revalue(df$algorithm, c("UGP_eq_opp_in_False"="FairGPopp"))
   
   switch (statistic,
           median = {
@@ -155,7 +158,6 @@ make_scatter_figure = function(name, var1="race-TPRDiff", var2="accuracy", algos
           }
           
   )
-  
   # Scatterplot
   switch(display,
          off = ggplot(dataFrame, aes_q(x=x_var, y=y_var, colour=quote(algorithm))) + geom_point() +
@@ -164,22 +166,50 @@ make_scatter_figure = function(name, var1="race-TPRDiff", var2="accuracy", algos
            labs(y=var2, x=var1, title=name),
          captain = ggplot(dataFrame, aes_q(x=x_var, y=y_var, colour=quote(algorithm))) + geom_point() +
            labs(y=var2, x=var1, caption = str_c(name, "_numerical-binsensitive.csv")),
-         all = ggplot(dataFrame, aes_q(x=x_var, y=y_var, colour=quote(algorithm))) + geom_point() +
+         all = ggplot(dataFrame, aes_q(x=x_var, y=y_var, colour=quote(algorithm))) + geom_point(size=3, aes(shape = algorithm)) +
            labs(y=var2, x=var1, title=name, caption = str_c(name, "_numerical-binsensitive.csv"))
   )
 }
 
+# plot box
+plot_sensitivity = function(df, var1, var2) {
+  x_var = as.name(var1)
+  y_var = as.name(var2)
+
+  sensitivity_summary = create_sensitivity_summary(df, !!x_var, !!y_var)
+  basic_plot = basic_sensitivity_plot(sensitivity_summary, !!x_var, !!y_var)
+  plot_rects_sensitivity_summary(basic_plot)
+}
+
+make_sensitivity_figure = function(name, var1="DIbinary", var2="accuracy", algos_plot=algos_to_plot) {
+  df = read.csv(name, check.names=FALSE) %>%
+    filter(algorithm %in% algos_plot) %>%
+    mutate(algorithm=recode(algorithm, "UGP_in_False"="GP"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_eq_opp_in_True"="FairGPopp*"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_eq_opp_in_False"="FairGPopp"))
+  
+  # df$algorithm <- revalue(df$algorithm, c("UGP_in_False"="GP"))
+  # df$algorithm <- revalue(df$algorithm, c("UGP_eq_opp_in_True"="FairGPopp*"))
+  # df$algorithm <- revalue(df$algorithm, c("UGP_eq_opp_in_False"="FairGPopp"))
+  
+  plot_sensitivity(df, var1, var2)
+}
+
+# dataset setting
+file_name = list("adult_race", "adult_sex",
+                "propublica-recidivism_race","propublica-recidivism_sex")
+file_attribute = list("race", "sex", 
+                      "race", "sex")
+N_file = length(file_name)
+
+
 ```
 
-## Algorithm accuracy vs fairness (CV, DIbinary, group-TPRDiff)
+## Algorithm accuracy vs fairness (group-TPRDiff)
 
 ```{r}
-variable_1 = "CV"
-add_for_1 = 0
-variable_2 = "DIbinary"
-add_for_2 = 0
-variable_3 = "TPRDiff"
-add_for_3 = 1
+variable_1 = "TPRDiff"
+add_for_1 = 1
 target = "accuracy"
 add_for_target = 0
 
@@ -194,23 +224,10 @@ for (i in 1:N_file) {
   } else {
     var1_name = variable_1
   }
-  q_1 = make_scatter_figure(file_name[i], var1=var1_name, var2=target_name, display = "title")
-  if(add_for_2){
-    var2_name = paste(file_attribute[i], "-", variable_2, sep="")
-  } else {
-    var2_name = variable_2
-  }
-  q_2 = make_scatter_figure(file_name[i], var1=var2_name, var2=target_name, display = "off")
-  if(add_for_3){
-    var3_name = paste(file_attribute[i], "-", variable_3, sep="")
-  } else {
-    var3_name = variable_3
-  }
-  q_3 = make_scatter_figure(file_name[i], var1=var3_name, var2=target_name, display = "captain")
-  q = ggarrange(q_1, q_2, q_3, ncol=1, nrow=3, common.legend = TRUE, legend="right")
+  q = make_scatter_figure(file_name[i], var1=var1_name, var2=target_name, display = "all")
   print(q)
-  export_name = paste("AWS-result/", file_name[i], "_fair.png", sep="")
-#  ggsave(export_name, q)
+  export_name = paste(file_name[i], "_opp.eps", sep="")
+  ggsave(export_name, q)
 }
 
 ```
@@ -239,18 +256,17 @@ for (i in 1:N_file) {
   p = make_sensitivity_figure(temp_name, var1 = var1_name, var2 = var2_name) +
   ggtitle(paste(file_name[i], "dataset,", file_attribute[i], "attribute"))
   print(p)
-  export_name = paste("AWS-result/", file_name[i], "-", variable_1, "-", variable_2, "_fair.png", sep="")
-#  ggsave(export_name, p)
+  export_name = paste(file_name[i], "_opp_box.eps", sep="")
+  ggsave(export_name, p)
 }
 
 ```
-## Algorithm independence/separation vs sufficiency (DIbinary/group-TPRDiff vs calibration)
+
+## Algorithm separation vs sufficiency (group-TPRDiff vs calibration)
 
 ```{r}
-variable_1 = "DIbinary"
-add_for_1 = 0
-variable_2 = "TPRDiff"
-add_for_2 = 1
+variable_1 = "TPRDiff"
+add_for_1 = 1
 target = "calibration+"
 add_for_target = 1
 
@@ -265,18 +281,11 @@ for (i in 1:N_file) {
   } else {
     var1_name = variable_1
   }
-  q_1 = make_scatter_figure(file_name[i], var1=var1_name, var2=target_name, display = "title")
+  q = make_scatter_figure(file_name[i], var1=var1_name, var2=target_name, display = "all")
   
-  if(add_for_2){
-    var2_name = paste(file_attribute[i], "-", variable_2, sep="")
-  } else {
-    var2_name = variable_2
-  }
-  q_2 = make_scatter_figure(file_name[i], var1=var2_name, var2=target_name, display = "captain")
-  q = ggarrange(q_1, q_2, ncol=1, nrow=2, common.legend = TRUE, legend="right")
   print(q)
-  export_name = paste("AWS-result/", file_name[i], "_sufficiency.png", sep="")
-#  ggsave(export_name, q)
+  export_name = paste(file_name[i], "_sufficiency.eps", sep="")
+  ggsave(export_name, q)
 }
 
 ```
@@ -290,9 +299,9 @@ for (i in 1:N_file) {
 <!-- for (i in 1:N_file) { -->
 <!--   var1_name = paste(variable_1, "-", file_attribute[i], sep="") -->
 <!--   var2_name = paste(variable_2, "-", file_attribute[i], sep="") -->
-<!--   q = make_scatter_figure(file_name[i], var1=var1_name, var2=var2_name, algos=method_plot, display = "all") -->
+<!--   q = make_scatter_figure(file_name[i], var1=var1_name, var2=var2_name, algos_plot=method_plot, display = "all") -->
 <!--   print(q) -->
-<!--   export_name = paste("AWS-result/", file_name[i], "_PR.png", sep="") -->
+<!--   export_name = paste("AWS-result/", file_name[i], "_PR.eps", sep="") -->
 <!-- #  ggsave(export_name, q) -->
 <!-- } -->
 <!-- ``` -->
