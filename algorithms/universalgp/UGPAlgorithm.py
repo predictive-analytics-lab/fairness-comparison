@@ -62,12 +62,13 @@ class UGP(Algorithm):
             tmp_path = Path(tmpdir)
 
             # Save the data in a numpy file called 'data.npz'
-            np.savez(tmp_path / Path("data.npz"), **raw_data)
+            data_path = tmp_path / Path("data.npz")
+            np.savez(data_path, **raw_data)
 
             # Construct and execute command
             model_name = "local"  # f"run{self.counter}_s_as_input_{self.s_as_input}"
-            self.run_ugp(_flags(parameters, tmpdir, self.s_as_input, model_name,
-                         raw_data['ytrain'].shape[0]))
+            self.run_ugp(_flags(parameters, str(data_path), tmpdir, self.s_as_input, model_name,
+                                raw_data['ytrain'].shape[0]))
 
             # Read the results from the numpy file 'predictions.npz'
             output = np.load(tmp_path / Path(model_name) / Path("predictions.npz"))
@@ -237,14 +238,16 @@ class UGPEqOpp(UGP):
 
         with TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
+            data_path = tmp_path / Path("data.npz")
             model_name = "local"  # f"run{self.counter}_s_as_input_{self.s_as_input}"
-            flags = _flags(parameters, tmpdir, self.s_as_input, model_name, len(raw_data['ytrain']))
+            flags = _flags(parameters, str(data_path), tmpdir, self.s_as_input, model_name,
+                           len(raw_data['ytrain']))
 
             if self.tpr is None:
                 # Split the training data into train and dev and save it to `data.npz`
-                train_dev_data = _split_train_dev(raw_data['xtrain'], raw_data['ytrain'],
-                                                  raw_data['strain'])
-                np.savez(tmp_path / Path("data.npz"), **train_dev_data)
+                train_dev_data = _split_train_dev(
+                    raw_data['xtrain'], raw_data['ytrain'], raw_data['strain'])
+                np.savez(data_path, **train_dev_data)
 
                 # First run
                 self.run_ugp(flags)
@@ -266,7 +269,7 @@ class UGPEqOpp(UGP):
                 })
 
             # Save with real test data
-            np.savez(tmp_path / Path("data.npz"), **raw_data)
+            np.savez(data_path, **raw_data)
 
             # Second run
             self.run_ugp(flags)
@@ -369,14 +372,15 @@ def _split_train_dev(inputs, labels, sensitive):
                 ytest=labels[test_fraction], stest=sensitive[test_fraction])
 
 
-def _flags(additional, save_dir, s_as_input, model_name, num_train):
+def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train):
     batch_size = min(MAX_BATCH_SIZE, num_train)
     return {**dict(
         tf_mode='eager' if USE_EAGER else 'graph',
         data='sensitive_from_numpy',
-        dataset_dir=save_dir,
+        dataset_path=data_path,
         cov='SquaredExponential',
-        lr=0.005,
+        optimizer="AdamOptimizer",
+        lr=0.001,
         model_name=model_name,
         batch_size=batch_size,
         train_steps=min(MAX_TRAIN_STEPS, num_train * _num_epochs(num_train) // batch_size),
@@ -393,15 +397,14 @@ def _flags(additional, save_dir, s_as_input, model_name, num_train):
         diag_post=False,
         optimize_inducing=True,
         use_loo=False,
-        # use_loo=True,
-        # loo_steps=10,
+        loo_steps=0,
         length_scale=1.0,
         sf=1.0,
         iso=False,
         num_samples_pred=2000,
         s_as_input=s_as_input,
         num_inducing=MAX_NUM_INDUCING,
-    ), **additional}
+    ), **parameters}
 
 
 def _num_epochs(num_train):
