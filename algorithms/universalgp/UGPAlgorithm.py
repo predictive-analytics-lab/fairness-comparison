@@ -137,6 +137,7 @@ class UGPDemPar(UGP):
     MEAN = 1
     MIN = 2
     MAX = 3
+    RULE80 = 4
 
     def __init__(self, s_as_input=True, target_acceptance=None, average_prediction=False,
                  target_mode=MEAN, marginal=False):
@@ -154,6 +155,8 @@ class UGPDemPar(UGP):
                 self.name += "_tar_min"
             elif target_mode == self.MAX:
                 self.name += "_tar_max"
+            elif target_mode == self.RULE80:
+                self.name += "_tar_80"
             else:
                 raise ValueError(f"invalid target: '{target_mode}'")
         self.target_acceptance = target_acceptance
@@ -166,13 +169,20 @@ class UGPDemPar(UGP):
 
         if self.target_acceptance is None:
             if self.target_mode == self.MEAN:
-                target_rate = .5 * (biased_acceptance[0] + biased_acceptance[1])
+                target_rate = [.5 * (biased_acceptance[0] + biased_acceptance[1])] * 2
             elif self.target_mode == self.MIN:
-                target_rate = min(biased_acceptance[0], biased_acceptance[1])
+                target_rate = [min(biased_acceptance[0], biased_acceptance[1])] * 2
             elif self.target_mode == self.MAX:
-                target_rate = max(biased_acceptance[0], biased_acceptance[1])
+                target_rate = [max(biased_acceptance[0], biased_acceptance[1])] * 2
+            elif self.target_mode == self.RULE80:
+                rate_small = min(biased_acceptance[0], biased_acceptance[1])
+                rate_large = max(biased_acceptance[0], biased_acceptance[1])
+                if rate_small < 0.8 * rate_large:
+                    target_rate = [0.8 * rate_large] * 2
+                else:
+                    target_rate = biased_acceptance
         else:
-            target_rate = self.target_acceptance
+            target_rate = [self.target_acceptance] * 2
 
         if self.marginal:
             p_s = _prior_s(raw_data['strain'])
@@ -181,8 +191,8 @@ class UGPDemPar(UGP):
 
         return dict(
             inf='VariationalYbar',
-            target_rate1=target_rate,
-            target_rate2=target_rate,
+            target_rate1=target_rate[0],
+            target_rate2=target_rate[1],
             biased_acceptance1=biased_acceptance[0],
             biased_acceptance2=biased_acceptance[1],
             probs_from_flipped=False,
