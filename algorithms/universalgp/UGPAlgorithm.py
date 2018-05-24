@@ -194,7 +194,8 @@ class UGPDemPar(UGP):
 
 class UGPEqOpp(UGP):
     """GP algorithm which enforces equality of opportunity"""
-    def __init__(self, s_as_input=True, average_prediction=False, tpr=None, marginal=False):
+    def __init__(self, s_as_input=True, average_prediction=False, tpr=None, marginal=False,
+                 tnr0=None, tnr1=None, tpr0=None, tpr1=None):
         super().__init__(s_as_input=s_as_input)
         if s_as_input and average_prediction:
             self.name = "UGP_eq_opp_av_True"
@@ -202,11 +203,27 @@ class UGPEqOpp(UGP):
                 self.name += "_marg"
         else:
             self.name = f"UGP_eq_opp_in_{s_as_input}"
-        if tpr is not None:
+
+        self.odds = None
+        if any(x is not None for x in [tnr0, tnr1, tpr0, tpr1]):  # if any of them is not `None`
+            self.odds = {}
+            for val, name, target in [(tnr0, '0tnr', 'p_ybary0_s0'), (tnr1, '1tnr', 'p_ybary0_s1'),
+                                      (tpr0, '0tpr', 'p_ybary1_s0'), (tpr1, '1tpr', 'p_ybary1_s1')]:
+                if val is not None:
+                    self.odds[target] = val
+                    self.name += f"_{name}_{val}"  # add to name
+                else:
+                    self.odds[target] = 1.0  # default value
+        elif tpr is not None:
+            self.odds = dict(
+                p_ybary0_s0=1.0,
+                p_ybary0_s1=1.0,
+                p_ybary1_s0=tpr,
+                p_ybary1_s1=tpr,
+            )
             self.name += f"_tpr_{tpr}"
 
         self.average_prediction = average_prediction
-        self.tpr = tpr
         self.marginal = marginal
 
     def _additional_parameters(self, raw_data):
@@ -243,7 +260,7 @@ class UGPEqOpp(UGP):
             flags = _flags(parameters, str(data_path), tmpdir, self.s_as_input, model_name,
                            len(raw_data['ytrain']))
 
-            if self.tpr is None:
+            if self.odds is None:
                 # Split the training data into train and dev and save it to `data.npz`
                 train_dev_data = _split_train_dev(
                     raw_data['xtrain'], raw_data['ytrain'], raw_data['strain'])
@@ -263,10 +280,7 @@ class UGPEqOpp(UGP):
                 odds['p_ybary1_s1'] = opportunity
                 flags.update({'train_steps': 2 * flags['train_steps'], **odds})
             else:
-                flags.update({
-                    'p_ybary1_s0': self.tpr,
-                    'p_ybary1_s1': self.tpr,
-                })
+                flags.update(self.odds)
 
             # Save with real test data
             np.savez(data_path, **raw_data)
