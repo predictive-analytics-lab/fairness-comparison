@@ -93,7 +93,7 @@ class CaldersAlgorithm(Algorithm):
                             '--quiet']
             # print("WILL RUN: %s" % cmdline)
             try:
-                result1 = subprocess.run(cmdline, timeout=10000)
+                result1 = subprocess.run(cmdline, timeout=600)
                 if result1.returncode != 0:
                     raise Exception("Training procedure failed")
             except subprocess.TimeoutExpired:
