@@ -222,7 +222,6 @@ class UGPEqOpp(UGP):
                 p_ybary1_s1=tpr,
             )
             self.name += f"_tpr_{tpr}"
-            self.automatic_odds = False
 
         self.average_prediction = average_prediction
         self.marginal = marginal
