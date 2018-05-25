@@ -222,9 +222,17 @@ class UGPEqOpp(UGP):
                 p_ybary1_s1=tpr,
             )
             self.name += f"_tpr_{tpr}"
+            self.automatic_odds = False
 
         self.average_prediction = average_prediction
         self.marginal = marginal
+
+    def __add_or_ignore(self, value, name, target):
+        if value is not None:
+            self.odds[target] = value
+            self.name += f"_{name}_{value}"
+        else:
+            self.odds[target] = 1.0
 
     def _additional_parameters(self, raw_data):
         biased_acceptance = compute_bias(raw_data['ytrain'], raw_data['strain'])
