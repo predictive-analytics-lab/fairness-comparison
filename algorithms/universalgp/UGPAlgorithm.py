@@ -204,14 +204,16 @@ class UGPEqOpp(UGP):
         else:
             self.name = f"UGP_eq_opp_in_{s_as_input}"
 
-        self.automatic_odds = True
-        if any(x is not None for x in [tnr0, tnr1, tpr0, tpr1]):
+        self.odds = None
+        if any(x is not None for x in [tnr0, tnr1, tpr0, tpr1]):  # if any of them is not `None`
             self.odds = {}
-            self.__add_or_ignore(tnr0, 'tnr0', 'p_ybary0_s0')
-            self.__add_or_ignore(tnr1, 'tnr1', 'p_ybary0_s1')
-            self.__add_or_ignore(tpr0, 'tpr0', 'p_ybary1_s0')
-            self.__add_or_ignore(tpr1, 'tpr1', 'p_ybary1_s1')
-            self.automatic_odds = False
+            for val, name, target in [(tnr0, '0tnr', 'p_ybary0_s0'), (tnr1, '1tnr', 'p_ybary0_s1'),
+                                      (tpr0, '0tpr', 'p_ybary1_s0'), (tpr1, '1tpr', 'p_ybary1_s1')]:
+                if val is not None:
+                    self.odds[target] = val
+                    self.name += f"_{name}_{val}"  # add to name
+                else:
+                    self.odds[target] = 1.0  # default value
         elif tpr is not None:
             self.odds = dict(
                 p_ybary0_s0=1.0,
@@ -266,7 +268,7 @@ class UGPEqOpp(UGP):
             flags = _flags(parameters, str(data_path), tmpdir, self.s_as_input, model_name,
                            len(raw_data['ytrain']))
 
-            if self.automatic_odds:
+            if self.odds is None:
                 # Split the training data into train and dev and save it to `data.npz`
                 train_dev_data = _split_train_dev(
                     raw_data['xtrain'], raw_data['ytrain'], raw_data['strain'])
