@@ -394,16 +394,18 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train):
         dataset_path=data_path,
         cov='SquaredExponential',
         optimizer="AdamOptimizer",
-        lr=0.001,
+        lr=0.005,
+        lr_drop_steps=10,
+        lr_drop_factor=0.2,
         model_name=model_name,
         batch_size=batch_size,
         train_steps=min(MAX_TRAIN_STEPS, num_train * _num_epochs(num_train) // batch_size),
-        eval_epochs=100000,
+        eval_epochs=70,
         summary_steps=100000,
         chkpnt_steps=100000,
         save_dir=save_dir,  # "/home/ubuntu/out2/",
         plot='',
-        logging_steps=10,
+        logging_steps=5,
         gpus=f"{int(sys.argv[1])}" if len(sys.argv) > 1 else '0',
         preds_path='predictions.npz',  # save the predictions into `predictions.npz`
         num_components=1,
@@ -424,8 +426,8 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train):
 def _num_epochs(num_train):
     """Adaptive number of epochs
 
-    num_train == 100 => num_epochs == 500
-    num_train == 10,000 => num_epochs == 50
-    num_train == 25,000,000 => num_epochs == 1
+    num_train == 100 => num_epochs == 700
+    num_train == 10,000 => num_epochs == 70
+    num_train == 49,000,000 => num_epochs == 1
     """
-    return int(8000 / np.sqrt(num_train))
+    return int(7000 / np.sqrt(num_train))
