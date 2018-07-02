@@ -62,12 +62,13 @@ class UGP(Algorithm):
             tmp_path = Path(tmpdir)
 
             # Save the data in a numpy file called 'data.npz'
-            np.savez(tmp_path / Path("data.npz"), **raw_data)
+            data_path = tmp_path / Path("data.npz")
+            np.savez(data_path, **raw_data)
 
             # Construct and execute command
             model_name = "local"  # f"run{self.counter}_s_as_input_{self.s_as_input}"
-            self.run_ugp(_flags(parameters, tmpdir, self.s_as_input, model_name,
-                         raw_data['ytrain'].shape[0]))
+            self.run_ugp(_flags(parameters, str(data_path), tmpdir, self.s_as_input, model_name,
+                                raw_data['ytrain'].shape[0]))
 
             # Read the results from the numpy file 'predictions.npz'
             output = np.load(tmp_path / Path(model_name) / Path("predictions.npz"))
@@ -193,7 +194,8 @@ class UGPDemPar(UGP):
 
 class UGPEqOpp(UGP):
     """GP algorithm which enforces equality of opportunity"""
-    def __init__(self, s_as_input=True, average_prediction=False, tpr=None, marginal=False):
+    def __init__(self, s_as_input=True, average_prediction=False, tpr=None, marginal=False,
+                 tnr0=None, tnr1=None, tpr0=None, tpr1=None):
         super().__init__(s_as_input=s_as_input)
         if s_as_input and average_prediction:
             self.name = "UGP_eq_opp_av_True"
@@ -201,11 +203,27 @@ class UGPEqOpp(UGP):
                 self.name += "_marg"
         else:
             self.name = f"UGP_eq_opp_in_{s_as_input}"
-        if tpr is not None:
+
+        self.odds = None
+        if any(x is not None for x in [tnr0, tnr1, tpr0, tpr1]):  # if any of them is not `None`
+            self.odds = {}
+            for val, name, target in [(tnr0, '0tnr', 'p_ybary0_s0'), (tnr1, '1tnr', 'p_ybary0_s1'),
+                                      (tpr0, '0tpr', 'p_ybary1_s0'), (tpr1, '1tpr', 'p_ybary1_s1')]:
+                if val is not None:
+                    self.odds[target] = val
+                    self.name += f"_{name}_{val}"  # add to name
+                else:
+                    self.odds[target] = 1.0  # default value
+        elif tpr is not None:
+            self.odds = dict(
+                p_ybary0_s0=1.0,
+                p_ybary0_s1=1.0,
+                p_ybary1_s0=tpr,
+                p_ybary1_s1=tpr,
+            )
             self.name += f"_tpr_{tpr}"
 
         self.average_prediction = average_prediction
-        self.tpr = tpr
         self.marginal = marginal
 
     def _additional_parameters(self, raw_data):
@@ -237,14 +255,16 @@ class UGPEqOpp(UGP):
 
         with TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
+            data_path = tmp_path / Path("data.npz")
             model_name = "local"  # f"run{self.counter}_s_as_input_{self.s_as_input}"
-            flags = _flags(parameters, tmpdir, self.s_as_input, model_name, len(raw_data['ytrain']))
+            flags = _flags(parameters, str(data_path), tmpdir, self.s_as_input, model_name,
+                           len(raw_data['ytrain']))
 
-            if self.tpr is None:
+            if self.odds is None:
                 # Split the training data into train and dev and save it to `data.npz`
-                train_dev_data = _split_train_dev(raw_data['xtrain'], raw_data['ytrain'],
-                                                  raw_data['strain'])
-                np.savez(tmp_path / Path("data.npz"), **train_dev_data)
+                train_dev_data = _split_train_dev(
+                    raw_data['xtrain'], raw_data['ytrain'], raw_data['strain'])
+                np.savez(data_path, **train_dev_data)
 
                 # First run
                 self.run_ugp(flags)
@@ -260,13 +280,10 @@ class UGPEqOpp(UGP):
                 odds['p_ybary1_s1'] = opportunity
                 flags.update({'train_steps': 2 * flags['train_steps'], **odds})
             else:
-                flags.update({
-                    'p_ybary1_s0': self.tpr,
-                    'p_ybary1_s1': self.tpr,
-                })
+                flags.update(self.odds)
 
             # Save with real test data
-            np.savez(tmp_path / Path("data.npz"), **raw_data)
+            np.savez(data_path, **raw_data)
 
             # Second run
             self.run_ugp(flags)
@@ -369,23 +386,26 @@ def _split_train_dev(inputs, labels, sensitive):
                 ytest=labels[test_fraction], stest=sensitive[test_fraction])
 
 
-def _flags(additional, save_dir, s_as_input, model_name, num_train):
+def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train):
     batch_size = min(MAX_BATCH_SIZE, num_train)
     return {**dict(
         tf_mode='eager' if USE_EAGER else 'graph',
         data='sensitive_from_numpy',
-        dataset_dir=save_dir,
+        dataset_path=data_path,
         cov='SquaredExponential',
+        optimizer="AdamOptimizer",
         lr=0.005,
+        lr_drop_steps=10,
+        lr_drop_factor=0.2,
         model_name=model_name,
         batch_size=batch_size,
         train_steps=min(MAX_TRAIN_STEPS, num_train * _num_epochs(num_train) // batch_size),
-        eval_epochs=100000,
+        eval_epochs=70,
         summary_steps=100000,
         chkpnt_steps=100000,
         save_dir=save_dir,  # "/home/ubuntu/out2/",
         plot='',
-        logging_steps=10,
+        logging_steps=5,
         gpus=f"{int(sys.argv[1])}" if len(sys.argv) > 1 else '0',
         preds_path='predictions.npz',  # save the predictions into `predictions.npz`
         num_components=1,
@@ -393,22 +413,21 @@ def _flags(additional, save_dir, s_as_input, model_name, num_train):
         diag_post=False,
         optimize_inducing=True,
         use_loo=False,
-        # use_loo=True,
-        # loo_steps=10,
+        loo_steps=0,
         length_scale=1.0,
         sf=1.0,
         iso=False,
         num_samples_pred=2000,
         s_as_input=s_as_input,
         num_inducing=MAX_NUM_INDUCING,
-    ), **additional}
+    ), **parameters}
 
 
 def _num_epochs(num_train):
     """Adaptive number of epochs
 
-    num_train == 100 => num_epochs == 500
-    num_train == 10,000 => num_epochs == 50
-    num_train == 25,000,000 => num_epochs == 1
+    num_train == 100 => num_epochs == 700
+    num_train == 10,000 => num_epochs == 70
+    num_train == 49,000,000 => num_epochs == 1
     """
-    return int(8000 / np.sqrt(num_train))
+    return int(7000 / np.sqrt(num_train))
