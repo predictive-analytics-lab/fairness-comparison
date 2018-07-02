@@ -1,0 +1,482 @@
+---
+title: "View_analysis"
+author: "Zc223"
+date: "18/06/2018"
+output: html_document
+---
+
+# Function definitions, setup
+
+```{r}
+library(stringr)
+library(ggplot2)
+library(dplyr)
+library(magrittr)
+library(corrplot)
+library(robust)
+library(ggpubr)
+library(fit.models)
+library(matrixStats)
+library(scatterplot3d)
+```
+
+## Global setting
+
+```{r global setting}
+# Use these for more than 10 algorithms
+colors_20 = c(
+  "#1f77b4", "#aec7e8", "#ff7f0e", "#ffbb78", "#2ca02c", "#98df8a", "#d62728", "#ff9896",
+  "#9467bd", "#c5b0d5", "#8c564b", "#c49c94", "#e377c2", "#f7b6d2", "#7f7f7f", "#c7c7c7",
+  "#bcbd22", "#dbdb8d", "#17becf", "#9edae5")
+
+# Use these for 10 or fewer algorithms
+colors_10 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf")
+# symbol = c(21:25, 1, 0, 5, 2, 6,
+#           7:14, 3, 4)
+symbol = c(15:18, 3, 4, 5, 7:14)
+full_baseline = c("LR", "DecisionTree", 
+                  # "Calders", 
+                  # "Kamishima", 
+                  "GP", "SVM", "DT",
+                  "ZafarEqOpp")
+# "Feldman-SVM", "Feldman-GaussianNB", "Feldman-LR", "Feldman-DecisionTree",
+
+catscale10  = scale_colour_manual(values=colors_10)
+catscale10_2 = scale_fill_manual(values=colors_10)
+
+catscale20  = scale_colour_manual(values=colors_20)
+catscale20_2 = scale_fill_manual(values=colors_20)
+
+true_name = character()
+false_name = character()
+true_tnr0 = character()
+false_tnr0 = character()
+true_tnr1 = character()
+false_tnr1 = character()
+true_tpr = character()
+false_tpr = character()
+true_tnr = character()
+false_tnr = character()
+for (i in 1: 4) {
+  for (k in 1:4) {
+    true_name = c(true_name, paste("FairGPopp*, 0-TNR=", i*0.1 + 0.5, ", 1-TNR=", 
+                                   i*0.1 + 0.5, ", TPR=", 
+                                   k*0.1 + 0.5, sep = ""))
+    true_tnr0 = c(true_tnr0, paste("FairGPopp*, 0-TNR=", i*0.1 + 0.5, sep = ""))
+    true_tnr1 = c(true_tnr1, paste("FairGPopp*, 1-TNR=", i*0.1 + 0.5, sep = ""))
+    
+    true_tnr = c(true_tnr, paste("FairGPopp*, TNR=", i*0.1 + 0.5, sep = ""))
+    true_tpr = c(true_tpr, paste("FairGPopp*, TPR=", k*0.1 + 0.5, sep = ""))
+    
+    false_name = c(false_name, paste("FairGPopp, 0-TNR=", i*0.1 + 0.5, ", 1-TNR=", 
+                                     i*0.1 + 0.5, ", TPR=", 
+                                     k*0.1 + 0.5, sep = ""))
+    false_tnr0 = c(false_tnr0, paste("FairGPopp, 0-TNR=", i*0.1 + 0.5, sep = ""))
+    false_tnr1 = c(false_tnr1, paste("FairGPopp, 1-TNR=", i*0.1 + 0.5, sep = ""))
+    
+    false_tnr = c(false_tnr, paste("FairGPopp, TNR=", i*0.1 + 0.5, sep = ""))
+    false_tpr = c(false_tpr, paste("FairGPopp, TPR=", k*0.1 + 0.5, sep = ""))
+  }
+  
+}
+algos_used_full = c(false_name)
+tnr0_full = c(false_tnr0)
+tnr1_full = c(false_tnr1)
+
+tnr_full = c(false_tnr)
+tpr_full = c(false_tpr)
+```
+
+## Function
+
+```{r function for plot}
+make_scatter_figure = function(name, var1="CV", var2="accuracy", algos=algos_used_full, view="algorithm",
+                               setTNR0=tnr0_full, setTNR1=tnr1_full, setTPRset=tpr_full, tnr_show=tnr_full,
+                               display="off", statistic = "off", baseline=full_baseline) {
+  x_var = as.name(var1)
+  y_var = as.name(var2)
+  target_view = as.name(view)
+  
+  df = read.csv(str_c(name, "_numerical-binsensitive.csv"), check.names=FALSE)%>%
+    filter(algorithm %in% algos, TNR0set%in% setTNR0, TNR1set%in% setTNR1, TPRset %in% setTPRset)
+  df = df[df$TNR0num == df$TNR1num, ]
+  
+  # df[["race-TPRDiff"]] = 1 - df[["race-TPRDiff"]] 
+  # df[["sex-TPRDiff"]] = 1 - df[["sex-TPRDiff"]] 
+  # df[["race-TNRDiff"]] = 1 - df[["race-TNRDiff"]] 
+  # df[["sex-TNRDiff"]] = 1 - df[["sex-TNRDiff"]]
+  
+  df[["race-AAD"]] = (abs(1 - df[["race-TPRDiff"]]) + abs(1 - df[["race-TNRDiff"]]))/2
+  df[["sex-AAD"]] = ( abs(1 -df[["sex-TPRDiff"]]) + abs(1 - df[["sex-TNRDiff"]]))/2
+  
+  switch (statistic,
+          median = {
+            switch (view,
+                    algorithm ={
+                      num = length(algos)
+                      variable = algos
+                      tnr_show_view = algos
+                    },
+                    TPRset = {
+                      num = length(unique(setTPRset))
+                      variable = unique(setTPRset)
+                      tnr_show_view = variable
+                    },
+                    TNR0set = {
+                      num = length(unique(setTNR0))
+                      variable = unique(setTNR0)
+                      tnr_show_view = unique(tnr_show)
+                    },
+                    TNR1set = {
+                      num = length(unique(setTNR1))
+                      variable = unique(setTNR1)
+                      tnr_show_view = unique(tnr_show)
+                    }
+            )
+            new_df = matrix(nrow=num,ncol=2, dimnames =list(1:num, c(var1, var2)))
+            for(j in 1:num){
+              temp_data = df[which(df[[view]]==variable[j]),c(var1, var2)]
+              new_df[j, ] =  colMedians(data.matrix(temp_data))
+            }
+            dataFrame <- data.frame(new_df)
+            names(dataFrame) <- c(var1,var2)
+            dataFrame[[view]] <- unique(tnr_show)
+          },
+          mean = {
+            switch (view,
+                    algorithm ={
+                      num = length(algos)
+                      variable = algos
+                      tnr_show_view = algos
+                    },
+                    TPRset = {
+                      num = length(unique(setTPRset))
+                      variable = unique(setTPRset)
+                      tnr_show_view = variable
+                    },
+                    TNR0set = {
+                      num = length(unique(setTNR0))
+                      variable = unique(setTNR0)
+                      tnr_show_view = unique(tnr_show)
+                    },
+                    TNR1set = {
+                      num = length(unique(setTNR1))
+                      variable = unique(setTNR1)
+                      tnr_show_view = unique(tnr_show)
+                    }
+            )
+            new_df = matrix(nrow=num,ncol=2, dimnames =list(1:num, c(var1, var2)))
+            for(j in 1:num){
+              temp_data = df[which(df[[view]]==variable[j]),c(var1, var2)]
+              new_df[j, ] =  colMeans(data.matrix(temp_data))
+            }
+            dataFrame <- data.frame(new_df)
+            names(dataFrame) <- c(var1,var2)
+            dataFrame[[view]] <- tnr_show_view
+          },
+          mean_of_repeats = {
+            num = length(algos)
+            switch (view,
+                    algorithm ={
+                      variable = algos
+                      tnr_show_view = algos
+                    },
+                    TPRset = {
+                      variable = setTPRset
+                      tnr_show_view = variable
+                    },
+                    TNR0set = {
+                      variable = setTNR0
+                      tnr_show_view = tnr_show
+                    },
+                    TNR1set = {
+                      variable = setTNR1
+                      tnr_show_view = tnr_show
+                    }
+            )
+            new_df = matrix(nrow=num,ncol=2, dimnames =list(1:num, c(var1, var2)))
+            for(j in 1:num){
+              temp_data = df[which(df$algorithm==algos[j]),c(var1, var2)]
+              new_df[j, ] =  colMeans(data.matrix(temp_data))
+            }
+            dataFrame <- data.frame(new_df)
+            names(dataFrame) <- c(var1,var2)
+            #dataFrame$algorithm <- algos
+            dataFrame[[view]] = tnr_show_view
+          },
+          off = {
+            dataFrame = df
+          }
+  )
+  color_used = catscale10
+  color_used_2 = catscale10_2
+  
+  if(is.character(baseline)){
+    df_baseline = read.csv(str_c(name, "_baseline.csv"), check.names=FALSE)%>%
+      filter(algorithm %in% baseline)
+    df_baseline [["race-AAD"]] = (abs(1 - df_baseline [["race-TPRDiff"]]) + abs(1 - df_baseline [["race-TNRDiff"]]))/2
+    df_baseline [["sex-AAD"]] = (abs(1 - df_baseline [["sex-TPRDiff"]]) + abs(1 - df_baseline [["sex-TNRDiff"]]))/2
+    
+    num_baseline = length(baseline)
+    new_df_baseline = matrix(nrow=num_baseline,ncol=2, dimnames =list(1:num_baseline, c(var1, var2)))
+    for(j in 1:num_baseline){
+      temp_baseline = df_baseline[which(df_baseline$algorithm==baseline[j]),c(var1, var2)]
+      new_df_baseline[j, ] =  colMeans(data.matrix(temp_baseline))
+    }
+    dataFrame_baseline <- data.frame(new_df_baseline)
+    names(dataFrame_baseline) <- c(var1,var2)
+    #dataFrame$algorithm <- algos
+    dataFrame_baseline[[view]] = baseline
+    
+    color_used = catscale20
+    color_used_2 = catscale20_2
+  }
+  
+  dataFrame = rbind(dataFrame, dataFrame_baseline)
+  dataFrame[[view]] = factor(dataFrame[[view]], levels= unique(dataFrame[[view]])) 
+  # Scatterplot
+  fig_title = paste(name, "(", statistic, ")", sep="")
+  switch(display,
+         off = ggplot(dataFrame, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
+           geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) +
+           labs(y=var2, x=var1),
+         title = ggplot(dataFrame, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
+           geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) +
+           labs(y=var2, x=var1, title=fig_title),
+         captain = ggplot(dataFrame, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
+           geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) +
+           labs(y=var2, x=var1, caption = str_c(name, "_numerical-binsensitive.csv")),
+         all = ggplot(dataFrame, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
+           geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) +
+           labs(y=var2, x=var1, title=fig_title)
+  )
+}
+
+```
+
+## Users setting
+
+```{r Users setting}
+file_name = list("propublica-recidivism_race","propublica-recidivism_sex")
+file_attribute = list( "race", "sex")
+N_file = length(file_name)
+
+```
+
+## Algorithm accuracy vs fairness (group-TPRDiff) all points
+
+```{r scatter plot for all points}
+variable_1 = "TPRDiff"
+add_for_1 = 1
+variable_2 = "TNRDiff"
+add_for_2 =1
+variable_3 = "AAD"
+add_for_3 =1
+target = "accuracy"
+add_for_target = 0
+
+view_set = c("TPRset","TNR0set")
+
+for (i in 1:N_file) {
+  for (view_from in view_set){
+    if(add_for_target){
+      target_name = paste(file_attribute[i], "-", target, sep="")
+    } else {
+      target_name = target
+    }
+    if(add_for_1){
+      var1_name = paste(file_attribute[i], "-", variable_1, sep="")
+    } else {
+      var1_name = variable_1
+    }
+    q1 = make_scatter_figure(file_name[i], var1=var1_name, var2=target_name, 
+                             view=view_from, display = "all", statistic = "mean_of_repeats")
+    
+    if(add_for_2){
+      var2_name = paste(file_attribute[i], "-", variable_2, sep="")
+    } else {
+      var2_name = variable_2
+    }
+    q2 = make_scatter_figure(file_name[i], var1=var2_name, var2=target_name, 
+                             view=view_from, display = "off", statistic = "mean_of_repeats")
+    
+    q = ggarrange(q1, q2, ncol=1, nrow=2, common.legend = TRUE, legend="right")
+    print(q)
+    
+    if(add_for_3){
+      var3_name = paste(file_attribute[i], "-", variable_3, sep="")
+    } else {
+      var3_name = variable_3
+    }
+    q3 = make_scatter_figure(file_name[i], var1=var3_name, var2=target_name, 
+                             view=view_from, display = "all", statistic = "mean_of_repeats")
+    print(q3)
+    # export_name = paste(file_name[i], "_opp.eps", sep="")
+    # ggsave(export_name, q)
+  }
+}
+
+
+```
+
+## Algorithm accuracy vs fairness (group-TPRDiff) in terms of mean
+
+```{r plot for means}
+for (i in 1:N_file) {
+  for (view_from in view_set){
+    q1 = make_scatter_figure(file_name[i], var1=var1_name, var2=target_name,
+                             view=view_from, display = "all", statistic = "mean")
+    q2 = make_scatter_figure(file_name[i], var1=var2_name, var2=target_name,
+                             view=view_from, display = "off", statistic = "mean")
+    q = ggarrange(q1, q2, ncol=1, nrow=2, common.legend = TRUE, legend="right")
+    print(q)
+    
+    q3 = make_scatter_figure(file_name[i], var1=var3_name, var2=target_name,
+                             view=view_from, display = "all", statistic = "mean")
+    print(q3)
+    export_name = paste(file_name[i], "_odds.eps", sep="")
+    # ggsave(export_name, q)
+  }
+  
+}
+```
+
+## Algorithm accuracy vs fairness (group-TPRDiff) in terms of median
+
+```{r plot for medians}
+for (i in 1:N_file) {
+  for (view_from in view_set){
+    q1 = make_scatter_figure(file_name[i], var1=var1_name, var2=target_name,
+                             view=view_from, display = "all", statistic = "median")
+    q2 = make_scatter_figure(file_name[i], var1=var2_name, var2=target_name,
+                             view=view_from, display = "off", statistic = "median")
+    q = ggarrange(q1, q2, ncol=1, nrow=2, common.legend = TRUE, legend="right")
+    print(q)
+    
+    q3 = make_scatter_figure(file_name[i], var1=var3_name, var2=target_name,
+                             view=view_from, display = "all", statistic = "median")
+    print(q3)
+    export_name = paste(file_name[i], "_odds.eps", sep="")
+    # ggsave(export_name, q)
+  }
+  
+}
+```
+
+<!-- '''{r} -->
+<!-- make_3d_figure = function(name, var1="CV", var2="DIbinary", var3="accuracy", algos=algos_used_full, view="algorithm", -->
+<!--                           setTNR0=tnr0_full, setTNR1=tnr1_full, setTPRset=tpr_full, tnr_show=tnr_full, statistic = "off") { -->
+<!--   x_var = as.name(var1) -->
+<!--   y_var = as.name(var2) -->
+<!--   z_var = as.name(var3) -->
+<!--   target_view = as.name(view) -->
+
+<!--   df = read.csv(str_c(name, "_numerical-binsensitive.csv"), check.names=FALSE)%>% -->
+<!--     filter(algorithm %in% algos, TNR0set%in% setTNR0, TNR1set%in% setTNR1, TPRset %in% setTPRset) -->
+<!--   df = df[df$TNR0num == df$TNR1num, ] -->
+
+<!--   switch (statistic, -->
+<!--           median = { -->
+<!--             switch (view, -->
+<!--                     algorithm ={ -->
+<!--                       num = length(algos) -->
+<!--                       variable = algos -->
+<!--                       tnr_show_view = algos -->
+<!--                     }, -->
+<!--                     TPRset = { -->
+<!--                       num = length(unique(setTPRset)) -->
+<!--                       variable = unique(setTPRset) -->
+<!--                       tnr_show_view = variable -->
+<!--                     }, -->
+<!--                     TNR0set = { -->
+<!--                       num = length(unique(setTNR0)) -->
+<!--                       variable = unique(setTNR0) -->
+<!--                       tnr_show_view = unique(tnr_show) -->
+<!--                     }, -->
+<!--                     TNR1set = { -->
+<!--                       num = length(unique(setTNR1)) -->
+<!--                       variable = unique(setTNR1) -->
+<!--                       tnr_show_view = unique(tnr_show) -->
+<!--                     } -->
+<!--             ) -->
+<!--             new_df = matrix(nrow=num,ncol=2, dimnames =list(1:num, c(var1, var2))) -->
+<!--             for(j in 1:num){ -->
+<!--               temp_data = df[which(df[[view]]==variable[j]),c(var1, var2)] -->
+<!--               new_df[j, ] =  colMedians(data.matrix(temp_data)) -->
+<!--             } -->
+<!--             dataFrame <- data.frame(new_df) -->
+<!--             names(dataFrame) <- c(var1,var2) -->
+<!--             dataFrame[[view]] <- unique(tnr_show) -->
+<!--           }, -->
+<!--           mean = { -->
+<!--             switch (view, -->
+<!--                     algorithm ={ -->
+<!--                       num = length(algos) -->
+<!--                       variable = algos -->
+<!--                       tnr_show_view = algos -->
+<!--                     }, -->
+<!--                     TPRset = { -->
+<!--                       num = length(unique(setTPRset)) -->
+<!--                       variable = unique(setTPRset) -->
+<!--                       tnr_show_view = variable -->
+<!--                     }, -->
+<!--                     TNR0set = { -->
+<!--                       num = length(unique(setTNR0)) -->
+<!--                       variable = unique(setTNR0) -->
+<!--                       tnr_show_view = unique(tnr_show) -->
+<!--                     }, -->
+<!--                     TNR1set = { -->
+<!--                       num = length(unique(setTNR1)) -->
+<!--                       variable = unique(setTNR1) -->
+<!--                       tnr_show_view = unique(tnr_show) -->
+<!--                     } -->
+<!--             ) -->
+<!--             new_df = matrix(nrow=num,ncol=2, dimnames =list(1:num, c(var1, var2))) -->
+<!--             for(j in 1:num){ -->
+<!--               temp_data = df[which(df[[view]]==variable[j]),c(var1, var2)] -->
+<!--               new_df[j, ] =  colMeans(data.matrix(temp_data)) -->
+<!--             } -->
+<!--             dataFrame <- data.frame(new_df) -->
+<!--             names(dataFrame) <- c(var1,var2) -->
+<!--             dataFrame[[view]] <- tnr_show_view -->
+<!--           }, -->
+<!--           mean_of_repeats = { -->
+<!--             num = length(algos) -->
+<!--             switch (view, -->
+<!--                     algorithm ={ -->
+<!--                       variable = algos -->
+<!--                       tnr_show_view = algos -->
+<!--                     }, -->
+<!--                     TPRset = { -->
+<!--                       variable = setTPRset -->
+<!--                       tnr_show_view = variable -->
+<!--                     }, -->
+<!--                     TNR0set = { -->
+<!--                       variable = setTNR0 -->
+<!--                       tnr_show_view = tnr_show -->
+<!--                     }, -->
+<!--                     TNR1set = { -->
+<!--                       variable = setTNR1 -->
+<!--                       tnr_show_view = tnr_show -->
+<!--                     } -->
+<!--             ) -->
+<!--             new_df = matrix(nrow=num,ncol=2, dimnames =list(1:num, c(var1, var2))) -->
+<!--             for(j in 1:num){ -->
+<!--               temp_data = df[which(df$algorithm==algos[j]),c(var1, var2)] -->
+<!--               new_df[j, ] =  colMeans(data.matrix(temp_data)) -->
+<!--             } -->
+<!--             dataFrame <- data.frame(new_df) -->
+<!--             names(dataFrame) <- c(var1,var2) -->
+<!--             dataFrame$algorithm <- algos -->
+<!--             dataFrame[[view]] = tnr_show_view -->
+<!--           }, -->
+<!--           off = { -->
+<!--             dataFrame = df -->
+<!--           } -->
+<!--   ) -->
+<!--   # Scatterplot -->
+<!--   fig_title = paste("Dataset:", name, ", viewing from ", view, "(", statistic, ")", sep="") -->
+<!--   scatterplot3d(x=dataFrame[[x_var]], y=dataFrame[[y_var]], z=dataFrame[[z_var]], pch=16, type="h", -->
+<!--                 xlab=var1, ylab=var2, zlab=var3, main=fig_title) -->
+<!-- } -->
+<!-- ''' -->
