@@ -139,7 +139,7 @@ class UGPDemPar(UGP):
     MAX = 3
 
     def __init__(self, s_as_input=True, target_acceptance=None, average_prediction=False,
-                 target_mode=MEAN, marginal=False):
+                 target_mode=MEAN, marginal=False, precision_target=1.0):
         super().__init__(s_as_input=s_as_input)
         if s_as_input and average_prediction:
             self.name = "UGP_dem_par_av_True"
@@ -156,10 +156,13 @@ class UGPDemPar(UGP):
                 self.name += "_tar_max"
             else:
                 raise ValueError(f"invalid target: '{target_mode}'")
+        if precision_target != 1.0:
+            self.name += f"_pt_{precision_target}"
         self.target_acceptance = target_acceptance
         self.target_mode = target_mode
         self.average_prediction = average_prediction
         self.marginal = marginal
+        self.precision_target = precision_target
 
     def _additional_parameters(self, raw_data):
         biased_acceptance = compute_bias(raw_data['ytrain'], raw_data['strain'])
@@ -189,6 +192,7 @@ class UGPDemPar(UGP):
             average_prediction=self.average_prediction,
             p_s0=p_s[0],
             p_s1=p_s[1],
+            precision_target=self.precision_target,
         )
 
 
@@ -430,4 +434,4 @@ def _num_epochs(num_train):
     num_train == 10,000 => num_epochs == 70
     num_train == 49,000,000 => num_epochs == 1
     """
-    return int(7000 / np.sqrt(num_train))
+    return int(2000 / np.sqrt(num_train))
