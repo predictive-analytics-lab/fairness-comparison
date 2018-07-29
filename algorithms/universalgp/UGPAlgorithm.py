@@ -12,8 +12,8 @@ from ..Algorithm import Algorithm
 UGP_PATH = "/home/ubuntu/code/UniversalGP/gaussian_process.py"
 USE_EAGER = False
 MAX_TRAIN_STEPS = 10000
-MAX_BATCH_SIZE = 5000
-MAX_NUM_INDUCING = 5000
+MAX_BATCH_SIZE = 10000
+MAX_NUM_INDUCING = 2500
 
 
 class UGP(Algorithm):
@@ -192,7 +192,8 @@ class UGPDemPar(UGP):
             average_prediction=self.average_prediction,
             p_s0=p_s[0],
             p_s1=p_s[1],
-            precision_target=self.precision_target,
+            p_ybary0_or_ybary1_s0=self.precision_target,
+            p_ybary0_or_ybary1_s1=self.precision_target,
         )
 
 
@@ -399,12 +400,12 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train):
         cov='SquaredExponential',
         optimizer="AdamOptimizer",
         lr=0.005,
-        lr_drop_steps=10,
-        lr_drop_factor=0.2,
+        lr_drop_steps=0,
+        lr_drop_factor=1.0,
         model_name=model_name,
         batch_size=batch_size,
         train_steps=min(MAX_TRAIN_STEPS, num_train * _num_epochs(num_train) // batch_size),
-        eval_epochs=70,
+        eval_epochs=30,
         summary_steps=100000,
         chkpnt_steps=100000,
         save_dir=save_dir,  # "/home/ubuntu/out2/",
@@ -434,4 +435,4 @@ def _num_epochs(num_train):
     num_train == 10,000 => num_epochs == 70
     num_train == 49,000,000 => num_epochs == 1
     """
-    return int(2000 / np.sqrt(num_train))
+    return int(7000 / np.sqrt(num_train))

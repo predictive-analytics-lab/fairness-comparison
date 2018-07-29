@@ -2,10 +2,10 @@
 
 # this command puts the output into the file "log.txt"
 python -u benchmark.py 0 \
-	--num-trials 5 \
-	--datasets '["two-gaussians", "ricci", "adult", "german", "propublica-recidivism", "propublica-violent-recidivism"]' \
-	--algorithms '["UGP_in_True"]' \
-	> log.txt 2>&1 &
+       --num-trials 4 \
+       --datasets '["adult"]' \
+	> log_adult_4_trials_vary_both_precision_targets_no_lr_drop_1.0-0.2.txt 2>&1 &
+#        --datasets '["propublica-recidivism"]' \
 # python -u benchmark.py 0 --num-trials 5  --datasets '["two-gaussians"]'  > log_two_gauss.txt 2>&1 &
 # python -u benchmark.py 1 --num-trials 5  --datasets '["ricci"]'  > log_ricci.txt 2>&1 &
 # python -u benchmark.py 2 --num-trials 5  --datasets '["adult"]'  > log_adult.txt 2>&1 &
