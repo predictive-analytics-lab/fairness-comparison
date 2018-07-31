@@ -55,6 +55,8 @@ def general_plotting(plot_fun, data_list, xaxis, yaxis, params):
         else:
             fig.savefig(figure_path, dpi=params['dpi'])
         # print(xaxis_measure, yaxis_measure)
+    else:
+        return fig, plots
 
 
 def generate_graph(data_list, xaxis, yaxis, save=False, legend_outside=False, figsize=(20, 6),
@@ -85,8 +87,8 @@ def generate_graph(data_list, xaxis, yaxis, save=False, legend_outside=False, fi
             plot.plot(entry.values[xaxis_measure], entry.values[yaxis_measure], shapes[shp_index],
                       label=entry.label, **additional_params  # c=colors[i],
             )
-    general_plotting(_core_plot, data_list, xaxis, yaxis,
-                     dict(save=save, legend_outside=legend_outside, figsize=figsize, dpi=dpi))
+    params = dict(save=save, legend_outside=legend_outside, figsize=figsize, dpi=dpi)
+    return general_plotting(_core_plot, data_list, xaxis, yaxis, params)
 
 
 def errorbox(data_list, xaxis, yaxis, save=False, legend_outside=False, figsize=(20, 6),
@@ -108,21 +110,22 @@ def errorbox(data_list, xaxis, yaxis, save=False, legend_outside=False, figsize=
     #  "#9467bd", "#c5b0d5", "#8c564b", "#c49c94", "#e377c2", "#f7b6d2", "#7f7f7f", "#c7c7c7",
     #  "#bcbd22", "#dbdb8d", "#17becf", "#9edae5"]
 
-    colors = ["#1f77b4", "#aec7e8", "#ff7f0e", "#ffbb78", "#2ca02c", "#98df8a",
-              "#d62728", "#ff9896", "#9467bd", "#c5b0d5", "#8c564b", "#c49c94",
-              "#e377c2", "#f7b6d2", "#7f7f7f", "#c7c7c7", "#bcbd22", "#dbdb8d",
-              "#17becf", "#9edae5"]
+    # colors20 = ["#1f77b4", "#aec7e8", "#ff7f0e", "#ffbb78", "#2ca02c", "#98df8a", "#d62728",
+    #             "#ff9896", "#9467bd", "#c5b0d5", "#8c564b", "#c49c94", "#e377c2", "#f7b6d2",
+    #             "#7f7f7f", "#c7c7c7", "#bcbd22", "#dbdb8d", "#17becf", "#9edae5"]
+    colors10 = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2",
+                "#7f7f7f", "#bcbd22", "#17becf"]
 
     def _core_plot(plot, plot_def, xaxis_measure, yaxis_measure):
         for i, entry in enumerate(plot_def.entries):
             xmean, xstd = np.mean(entry.values[xaxis_measure]), np.std(entry.values[xaxis_measure])
             ymean, ystd = np.mean(entry.values[yaxis_measure]), np.std(entry.values[yaxis_measure])
-            plot.bar(xmean, ystd, bottom=ymean - 0.5 * ystd,
-                     width=xstd, align='center', color='none', edgecolor=colors[i],
-                     label=entry.label, linewidth=3)
+            plot.bar(xmean, ystd, bottom=ymean - 0.5 * ystd, width=xstd, align='center',
+                     color='none', edgecolor=colors10[i], label=entry.label, linewidth=3,
+                     zorder=1000.)
             plot.plot(xmean, ymean, 'ko')
-    general_plotting(_core_plot, data_list, xaxis, yaxis,
-                     dict(save=save, legend_outside=legend_outside, figsize=figsize, dpi=dpi))
+    params = dict(save=save, legend_outside=legend_outside, figsize=figsize, dpi=dpi)
+    return general_plotting(_core_plot, data_list, xaxis, yaxis, params)
 
 
 def parse(filename, condition=None, mapping=None):
@@ -198,3 +201,26 @@ def mark_as_unfilled(startswith):
     def _mapping(label):
         return label, not label.startswith(startswith)
     return _mapping
+
+
+def merge_same_labels(plot_defs):
+    """Merge entries that have the same label"""
+    new_plot_defs = []
+    for plot_def in plot_defs:
+        new_entries = []
+        entry_index = {}  # for finding the right index in `new_entries`
+        for entry in plot_def.entries:
+            if entry.label not in entry_index:
+                # new entry
+                entry_index[entry.label] = len(new_entries)
+                new_entries.append((entry, [entry.values]))
+            else:
+                # append the values
+                ind = entry_index[entry.label]
+                new_entries[ind][1].append(entry.values)
+        # convert the list of tuples to a list of entries, in place
+        for j, gathered_entry in enumerate(new_entries):
+            # merge the lists of dataframes
+            new_entries[j] = gathered_entry[0]._replace(values=pd.concat(gathered_entry[1]))
+        new_plot_defs.append(plot_def._replace(entries=new_entries))
+    return new_plot_defs
