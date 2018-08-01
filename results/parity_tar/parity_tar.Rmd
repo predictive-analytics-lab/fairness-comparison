@@ -194,16 +194,16 @@ make_sensitivity_figure = function(name, var1="DIbinary", var2="accuracy", algos
   df = read.csv(name, check.names=FALSE) %>%
     filter(algorithm %in% algos_plot) %>%
     # mutate(algorithm=recode(algorithm, ZafarFairness="Zafar")) # rename to Zafar for clarity
-    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.1"="FairGPparity, target=0.1"))%>%
-    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.2"="FairGPparity, target=0.2"))%>%
-    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.3"="FairGPparity, target=0.3"))%>%
-    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.4"="FairGPparity, target=0.4"))%>%
-    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.5"="FairGPparity, target=0.5"))%>%
-    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.1"="FairGPparity*, target=0.1"))%>%
-    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.2"="FairGPparity*, target=0.2"))%>%
-    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.3"="FairGPparity*, target=0.3"))%>%
-    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.4"="FairGPparity*, target=0.4"))%>%
-    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.5"="FairGPparity*, target=0.5"))
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.1"="FairGPparity*, target=0.1"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.2"="FairGPparity*, target=0.2"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.3"="FairGPparity*, target=0.3"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.4"="FairGPparity*, target=0.4"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.5"="FairGPparity*, target=0.5"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.1"="FairGPparity, target=0.1"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.2"="FairGPparity, target=0.2"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.3"="FairGPparity, target=0.3"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.4"="FairGPparity, target=0.4"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.5"="FairGPparity, target=0.5"))
   
   plot_sensitivity(df, var1, var2)
 }
