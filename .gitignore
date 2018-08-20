@@ -126,3 +126,5 @@ log.txt
 
 # IDEs
 .idea/
+
+.DS_Store
