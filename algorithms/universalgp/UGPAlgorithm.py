@@ -53,7 +53,7 @@ class UGP(Algorithm):
         """
         self.counter += 1
         # Separate the data and make sure the labels are either 0 or 1
-        raw_data, label_converter = _prepare_data(*data)
+        raw_data, label_converter = prepare_data(*data)
 
         # Set algorithm dependent parameters
         parameters = self._additional_parameters(raw_data)
@@ -249,7 +249,7 @@ class UGPEqOpp(UGP):
 
     def run(self, *data):
         self.counter += 1
-        raw_data, label_converter = _prepare_data(*data)
+        raw_data, label_converter = prepare_data(*data)
 
         parameters = self._additional_parameters(raw_data)
 
@@ -296,7 +296,7 @@ class UGPEqOpp(UGP):
         return label_converter((pred_mean > 0.5).astype(raw_data['ytest'].dtype)[:, 0]), []
 
 
-def _prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
+def prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
                   single_sensitive, privileged_vals, params):
     # Separate data
     sensitive = [df[single_sensitive].values[:, np.newaxis] for df in [train_df, test_df]]
