@@ -21,10 +21,11 @@ class UGP(Algorithm):
     This class calls the UniversalGP code
     """
 
-    def __init__(self, s_as_input=True):
+    def __init__(self, s_as_input=True, use_lr=False):
         super().__init__()
         self.counter = 0
         self.s_as_input = s_as_input
+        self.use_lr = use_lr
         self.name = f"UGP_in_{s_as_input}"
 
     def run(self, *data):
@@ -119,10 +120,9 @@ class UGP(Algorithm):
         """
         return dict(s_as_input=self.s_as_input)
 
-    @staticmethod
-    def _additional_parameters(_):
+    def _additional_parameters(self, _):
         return dict(
-            inf='VariationalWithS',
+            inf='LogReg' if self.use_lr else 'VariationalWithS',
         )
 
     def _save_in_json(self, save_path):
@@ -139,8 +139,18 @@ class UGPDemPar(UGP):
     MAX = 3
 
     def __init__(self, s_as_input=True, target_acceptance=None, average_prediction=False,
-                 target_mode=MEAN, marginal=False):
-        super().__init__(s_as_input=s_as_input)
+                 target_mode=MEAN, marginal=False, use_lr=False):
+        """
+        Args:
+            s_as_input: should the sensitive attribute be part of the input?
+            target_acceptance: which acceptance rate to target
+            average_prediction: whether to use to average of all possible sensitive attributes for
+                                predictions
+            target_mode: if no target rate is given, how is the target chosen?
+            marginal: when doing average_prediction, should the prior of s be taken into account?
+            use_lr: use logistic regression instead of Gaussian Processes
+        """
+        super().__init__(s_as_input=s_as_input, use_lr=use_lr)
         if s_as_input and average_prediction:
             self.name = "UGP_dem_par_av_True"
             if marginal:
@@ -180,7 +190,7 @@ class UGPDemPar(UGP):
             p_s = [0.5] * 2
 
         return dict(
-            inf='VariationalYbar',
+            inf='FairLogReg' if self.use_lr else 'VariationalYbar',
             target_rate1=target_rate,
             target_rate2=target_rate,
             biased_acceptance1=biased_acceptance[0],
