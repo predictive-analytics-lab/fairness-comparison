@@ -122,7 +122,7 @@ class UGP(Algorithm):
     @staticmethod
     def _additional_parameters(_):
         return dict(
-            inf='Variational',
+            inf='VariationalWithS',
         )
 
     def _save_in_json(self, save_path):
