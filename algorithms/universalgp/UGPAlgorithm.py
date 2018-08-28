@@ -21,11 +21,13 @@ class UGP(Algorithm):
     This class calls the UniversalGP code
     """
 
-    def __init__(self, s_as_input=True):
+    def __init__(self, s_as_input=True, use_lr=False):
         super().__init__()
         self.counter = 0
         self.s_as_input = s_as_input
-        self.name = f"UGP_in_{s_as_input}"
+        self.use_lr = use_lr
+        self.basename = "ULR" if use_lr else "UGP"
+        self.name = f"{self.basename}_in_{s_as_input}"
 
     def run(self, *data):
         """
@@ -119,10 +121,9 @@ class UGP(Algorithm):
         """
         return dict(s_as_input=self.s_as_input)
 
-    @staticmethod
-    def _additional_parameters(_):
+    def _additional_parameters(self, _):
         return dict(
-            inf='Variational',
+            inf='LogReg' if self.use_lr else 'VariationalWithS',
         )
 
     def _save_in_json(self, save_path):
@@ -139,14 +140,24 @@ class UGPDemPar(UGP):
     MAX = 3
 
     def __init__(self, s_as_input=True, target_acceptance=None, average_prediction=False,
-                 target_mode=MEAN, marginal=False):
-        super().__init__(s_as_input=s_as_input)
+                 target_mode=MEAN, marginal=False, use_lr=False):
+        """
+        Args:
+            s_as_input: should the sensitive attribute be part of the input?
+            target_acceptance: which acceptance rate to target
+            average_prediction: whether to use to average of all possible sensitive attributes for
+                                predictions
+            target_mode: if no target rate is given, how is the target chosen?
+            marginal: when doing average_prediction, should the prior of s be taken into account?
+            use_lr: use logistic regression instead of Gaussian Processes
+        """
+        super().__init__(s_as_input=s_as_input, use_lr=use_lr)
         if s_as_input and average_prediction:
-            self.name = "UGP_dem_par_av_True"
+            self.name = f"{self.basename}_dem_par_av_True"
             if marginal:
                 self.name += "_marg"
         else:
-            self.name = f"UGP_dem_par_in_{s_as_input}"
+            self.name = f"{self.basename}_dem_par_in_{s_as_input}"
         if target_acceptance is not None:
             self.name += f"_tar_{target_acceptance}"
         elif target_mode != self.MEAN:
@@ -180,7 +191,7 @@ class UGPDemPar(UGP):
             p_s = [0.5] * 2
 
         return dict(
-            inf='VariationalYbar',
+            inf='FairLogReg' if self.use_lr else 'VariationalYbar',
             target_rate1=target_rate,
             target_rate2=target_rate,
             biased_acceptance1=biased_acceptance[0],
@@ -195,14 +206,14 @@ class UGPDemPar(UGP):
 class UGPEqOpp(UGP):
     """GP algorithm which enforces equality of opportunity"""
     def __init__(self, s_as_input=True, average_prediction=False, tpr=None, marginal=False,
-                 tnr0=None, tnr1=None, tpr0=None, tpr1=None):
-        super().__init__(s_as_input=s_as_input)
+                 tnr0=None, tnr1=None, tpr0=None, tpr1=None, use_lr=False):
+        super().__init__(s_as_input=s_as_input, use_lr=use_lr)
         if s_as_input and average_prediction:
-            self.name = "UGP_eq_opp_av_True"
+            self.name = "{self.basename}_eq_opp_av_True"
             if marginal:
                 self.name += "_marg"
         else:
-            self.name = f"UGP_eq_opp_in_{s_as_input}"
+            self.name = f"{self.basename}_eq_opp_in_{s_as_input}"
 
         self.odds = None
         if any(x is not None for x in [tnr0, tnr1, tpr0, tpr1]):  # if any of them is not `None`

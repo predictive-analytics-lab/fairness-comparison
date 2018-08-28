@@ -213,14 +213,33 @@ def merge_same_labels(plot_defs):
             if entry.label not in entry_index:
                 # new entry
                 entry_index[entry.label] = len(new_entries)
+                # we store a tuple of the entry and a list of values
                 new_entries.append((entry, [entry.values]))
             else:
-                # append the values
+                # find the index for this label
                 ind = entry_index[entry.label]
+                # append the values to the list of values (second entry of the tuple)
                 new_entries[ind][1].append(entry.values)
+
         # convert the list of tuples to a list of entries, in place
-        for j, gathered_entry in enumerate(new_entries):
-            # merge the lists of dataframes
-            new_entries[j] = gathered_entry[0]._replace(values=pd.concat(gathered_entry[1]))
+        for j, (entry, list_of_values) in enumerate(new_entries):
+            # `pd.concat` merges the list of dataframes
+            new_entries[j] = entry._replace(values=pd.concat(list_of_values))
         new_plot_defs.append(plot_def._replace(entries=new_entries))
+    return new_plot_defs
+
+
+def reorder_entries(plot_defs, new_order):
+    """Reorder the entries in the plot definitions
+
+    Args:
+        plot_defs: list of plot definitions
+        new_order: list of indices that define the new order of the entries. Indices may appear
+                   multiple times and may appear not at all.
+    Returns:
+        list of plot definitions with reordered entries
+    """
+    new_plot_defs = []
+    for plot_def in plot_defs:
+        new_plot_defs.append(plot_def._replace(entries=[plot_def.entries[i] for i in new_order]))
     return new_plot_defs
