@@ -1,0 +1,208 @@
+---
+title: "Fairness analysis"
+author: "magica"
+date: "28/08/2018"
+output: html_document
+---
+
+# Function definitions, setup
+
+```{r}
+library(stringr)
+library(ggplot2)
+library(dplyr)
+library(magrittr)
+library(corrplot)
+library(robust)
+library(ggpubr)
+library(fit.models)
+```
+
+We'll be showing many different charts with a large number of different attributes, so a good
+categorical color scale is helpful. We're using [d3](https://d3js.org) `d3.schemeCategory10` and `d3.schemeCategory20`.
+
+```{r}
+# Use these for more than 10 algorithms
+colors_20 = c(
+  "#1f77b4", "#aec7e8", "#ff7f0e", "#ffbb78", "#2ca02c", "#98df8a", "#d62728", "#ff9896",
+  "#9467bd", "#c5b0d5", "#8c564b", "#c49c94", "#e377c2", "#f7b6d2", "#7f7f7f", "#c7c7c7",
+  "#bcbd22", "#dbdb8d", "#17becf", "#9edae5")
+
+# Use these for 10 or fewer algorithms
+colors_10 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf")
+
+catscale10  = scale_colour_manual(values=colors_10)
+catscale10_2 = scale_fill_manual(values=colors_10)
+
+catscale20  = scale_colour_manual(values=colors_20)
+catscale20_2 = scale_fill_manual(values=colors_20)
+
+baseline_to_plot = c(
+  "GP", 
+  "SVM", 
+  "ZafarAccuracy", "ZafarFairness", 
+  #"GaussianNB", 
+  "LR",
+  "DecisionTree"
+  #"Calders", 
+  #"Kamishima" 
+  #               "ZafarBaseline"
+)
+
+algos_to_plot = c(
+  "FairGPparity", "FairGPparity*")
+
+order = c(algos_to_plot, baseline_to_plot)
+
+create_sensitivity_summary = function(df, x_var, y_var) {
+  quo_x_var = enquo(x_var)
+  quo_y_var = enquo(y_var)
+  #x_mean_name = paste0("mean_", quo_name(quo_x_var))
+  #y_mean_name = paste0("mean_", quo_name(quo_y_var))
+  #x_sd_name = paste0("sd_", quo_name(quo_x_var))
+  #y_sd_name = paste0("sd_", quo_name(quo_y_var))
+  
+  sensitivity_summary = 
+    df %>% 
+    group_by(algorithm) %>% 
+    summarise(x_sd=sd(!!quo_x_var), x_mean=mean(!!quo_x_var), 
+              y_sd=sd(!!quo_y_var), y_mean=mean(!!quo_y_var))
+  sensitivity_summary
+}
+
+basic_sensitivity_plot = function(sensitivity_summary, x_var, y_var) {
+  ggplot(sensitivity_summary, aes(x=x_mean, y=y_mean, colour=algorithm)) + catscale10 + catscale10_2 +
+    xlab(quo_name(enquo(x_var))) + ylab(quo_name(enquo(y_var)))
+}
+
+plot_lines_sensitity_summary = function(basic_plot) {
+  basic_plot + 
+    geom_segment(aes(x=x_mean - x_sd, xend = x_mean + x_sd,
+                     y=y_mean, yend = y_mean,
+                     colour=algorithm)) + 
+    geom_segment(aes(x=x_mean, xend = x_mean,
+                     y=y_mean - y_sd, yend = y_mean + y_sd,
+                     colour=algorithm))
+}
+
+plot_ellipses_sensitity_summary = function(basic_plot) {
+  basic_plot + stat_ellipse(level=0.5, geom="polygon", aes(fill=algorithm), alpha=0.2) + stat_ellipse(level=0.5, fill=NA)
+}
+
+plot_rects_sensitivity_summary = function(basic_plot) {
+  aesthetics1 = aes(xmin = x_mean - 0.5 * x_sd,   
+                    xmax = x_mean + 0.5 * x_sd,
+                    ymin = y_mean - 0.5 * y_sd, 
+                    ymax = y_mean + 0.5 * y_sd,
+                    fill=algorithm)
+  aesthetics2 = aes(xmin = x_mean - 0.5 * x_sd,   
+                    xmax = x_mean + 0.5 * x_sd,
+                    ymin = y_mean - 0.5 * y_sd, 
+                    ymax = y_mean + 0.5 * y_sd,
+                    colour=algorithm)
+  basic_plot +
+    geom_rect(aesthetics1, alpha=0.15) +
+    geom_rect(aesthetics2, fill=NA)
+}
+
+do_it_all = function(name, var1, var2, check.names=FALSE) {
+  df = read.csv(str_c(name, ".csv"), check.names=check.names)
+  
+  x_var = as.name(var1)
+  y_var = as.name(var2)
+  
+  sensitivity_summary = create_sensitivity_summary(df, !!x_var, !!y_var)
+  
+  basic_plot = basic_sensitivity_plot(sensitivity_summary, !!x_var, !!y_var) + ggtitle(name)
+  
+  plot_rects_sensitivity_summary(basic_plot)
+}
+
+nb_measure_comparison = function(name, measure) {
+  num <- read.csv(str_c(name, "_numerical.csv"), check.names=FALSE)
+  nbs <- read.csv(str_c(name, "_numerical-binsensitive.csv"), check.names=FALSE)
+  
+  var1 <- as.name(str_c(measure, "-numerical"))
+  var2 <- as.name(str_c(measure, "-binsensitive"))
+  
+  df <- inner_join(num, nbs, by=c("algorithm", "run-id"), suffix = c("-numerical", "-binsensitive"))
+  df$name = name
+  df
+  # return (df %>% select(!!var1, !!var2, "run-id", "algorithm", "name"))
+}
+
+
+# plot box
+plot_sensitivity = function(df, var1, var2) {
+  x_var = as.name(var1)
+  y_var = as.name(var2)
+  
+  sensitivity_summary = create_sensitivity_summary(df, !!x_var, !!y_var)
+  basic_plot = basic_sensitivity_plot(sensitivity_summary, !!x_var, !!y_var)
+  plot_rects_sensitivity_summary(basic_plot)
+}
+
+show_mean_std = function(name, df, var1, var2){
+  x_var = as.name(var1)
+  y_var = as.name(var2)
+  sensitivity_summary = create_sensitivity_summary(df, !!x_var, !!y_var)
+  filename = paste(name, "_mean_std.xlsx")
+  write.xlsx(sensitivity_summary, filename, sheetName=name)
+}
+
+make_sensitivity_figure = function(name, var1="DIbinary", var2="accuracy", 
+                                   algos=algos_to_plot, baseline=baseline_to_plot) {
+  
+  df_algo = read.csv(str_c(name, "_numerical-binsensitive.csv"), check.names=FALSE) %>%
+    filter(algorithm %in% algos) %>%
+    # mutate(algorithm=recode(algorithm, ZafarFairness="Zafar")) # rename to Zafar for clarity
+    mutate(algorithm=recode(algorithm, FairGPdemo="FairGPparity"))%>%
+    mutate(algorithm=recode(algorithm, "FairGPdemo*"="FairGPparity*"))
+  
+  df_baseline = read.csv(str_c(name, "_baseline.csv"), check.names=FALSE) %>%
+    filter(algorithm %in% baseline)
+  
+  df =  rbind(df_algo, df_baseline)
+  
+  df$algorithm = factor(df$algorithm, levels= order) 
+  
+  show_mean_std(name, df, var1, var2)
+  plot_sensitivity(df, var1, var2)
+}
+
+# dataset setting
+file_name = list("adult_race", "adult_sex")
+file_attribute = list("race", "sex")
+N_file = length(file_name)
+
+```
+
+## Algorithm sensitivity variable_1 vs variable_2
+
+```{r}
+variable_1 = "DIbinary"
+add_for_1 = 0
+
+variable_2 = "accuracy"
+add_for_2 = 0
+
+for (i in 1:N_file) {
+  # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="")
+  if(add_for_1){
+    var1_name = paste(file_attribute[i], "-", variable_1, sep="")
+  } else {
+    var1_name = variable_1
+  }
+  if(add_for_2){
+    var2_name = paste(file_attribute[i], "-", variable_2, sep="")
+  } else {
+    var2_name = variable_2
+  }
+  p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name) +
+    ggtitle(paste(file_name[i], "dataset,", file_attribute[i], "attribute"))
+  print(p)
+  export_name = paste(file_name[i], "_demo_box.eps", sep="")
+  #ggsave(export_name, p)
+}
+
+```
