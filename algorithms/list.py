@@ -14,6 +14,14 @@ from metrics.DIAvgAll import DIAvgAll
 from metrics.Accuracy import Accuracy
 from metrics.MCC import MCC
 
+# algos = []
+# for tnr0 in [0.6, 0.7]:  # [0.6, 0.7, 0.8, 0.9, 1.0]:
+#     for tnr1 in [0.6, 0.7]:  # [0.6, 0.7, 0.8, 0.9, 1.0]:
+#         for tpr in [0.6, 0.7]:  # [0.6, 0.7, 0.8, 0.9, 1.0]:
+#             algos.append(UGPEqOpp(s_as_input=True, tnr0=tnr0, tnr1=tnr1, tpr0=tpr, tpr1=tpr))
+#             algos.append(UGPEqOpp(s_as_input=False, tnr0=tnr0, tnr1=tnr1, tpr0=tpr, tpr1=tpr))
+# ALGORITHMS = algos
+
 ALGORITHMS = [
     UGP(s_as_input=True),
     UGP(s_as_input=False),
