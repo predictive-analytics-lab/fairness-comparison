@@ -135,9 +135,9 @@ class UGP(Algorithm):
 
 class UGPDemPar(UGP):
     """GP algorithm which enforces demographic parity"""
-    MEAN = 1
-    MIN = 2
-    MAX = 3
+    MEAN = 2
+    MIN = 3
+    MAX = 4
 
     def __init__(self, s_as_input=True, target_acceptance=None, average_prediction=False,
                  target_mode=MEAN, marginal=False, use_lr=False):
@@ -166,7 +166,7 @@ class UGPDemPar(UGP):
             elif target_mode == self.MAX:
                 self.name += "_tar_max"
             else:
-                raise ValueError(f"invalid target: '{target_mode}'")
+                self.name += f"_tar_{target_mode}"
         self.target_acceptance = target_acceptance
         self.target_mode = target_mode
         self.average_prediction = average_prediction
@@ -182,6 +182,10 @@ class UGPDemPar(UGP):
                 target_rate = min(biased_acceptance[0], biased_acceptance[1])
             elif self.target_mode == self.MAX:
                 target_rate = max(biased_acceptance[0], biased_acceptance[1])
+            else:
+                acc_min = min(biased_acceptance[0], biased_acceptance[1])
+                acc_max = max(biased_acceptance[0], biased_acceptance[1])
+                target_rate = acc_min + self.target_mode * (acc_max - acc_min)
         else:
             target_rate = self.target_acceptance
 
@@ -192,8 +196,8 @@ class UGPDemPar(UGP):
 
         return dict(
             inf='FairLogReg' if self.use_lr else 'VariationalYbar',
-            target_rate1=target_rate,
-            target_rate2=target_rate,
+            target_rate1=target_rate[0] if isinstance(target_rate, tuple) else target_rate,
+            target_rate2=target_rate[1] if isinstance(target_rate, tuple) else target_rate,
             biased_acceptance1=biased_acceptance[0],
             biased_acceptance2=biased_acceptance[1],
             probs_from_flipped=False,
