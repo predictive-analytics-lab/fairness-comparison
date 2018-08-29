@@ -12,8 +12,8 @@ from ..Algorithm import Algorithm
 UGP_PATH = "/home/ubuntu/code/UniversalGP/gaussian_process.py"
 USE_EAGER = False
 MAX_TRAIN_STEPS = 10000
-MAX_BATCH_SIZE = 5000
-MAX_NUM_INDUCING = 5000
+MAX_BATCH_SIZE = 10000
+MAX_NUM_INDUCING = 5000  # 2500 seems to be more than enough
 
 
 class UGP(Algorithm):
@@ -409,13 +409,13 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train):
         dataset_path=data_path,
         cov='SquaredExponential',
         optimizer="AdamOptimizer",
-        lr=0.005,
-        lr_drop_steps=10,
+        lr=0.001,
+        lr_drop_steps=0,
         lr_drop_factor=0.2,
         model_name=model_name,
         batch_size=batch_size,
         train_steps=min(MAX_TRAIN_STEPS, num_train * _num_epochs(num_train) // batch_size),
-        eval_epochs=70,
+        eval_epochs=20,
         summary_steps=100000,
         chkpnt_steps=100000,
         save_dir=save_dir,  # "/home/ubuntu/out2/",
@@ -445,4 +445,5 @@ def _num_epochs(num_train):
     num_train == 10,000 => num_epochs == 70
     num_train == 49,000,000 => num_epochs == 1
     """
-    return int(7000 / np.sqrt(num_train))
+    # return int(7000 / np.sqrt(num_train))
+    return int(2500 / np.sqrt(num_train))
