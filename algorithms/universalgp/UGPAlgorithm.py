@@ -140,7 +140,7 @@ class UGPDemPar(UGP):
     MAX = 4
 
     def __init__(self, s_as_input=True, target_acceptance=None, average_prediction=False,
-                 target_mode=MEAN, marginal=False, use_lr=False):
+                 target_mode=MEAN, marginal=False, use_lr=False, precision_target=1.0):
         """
         Args:
             s_as_input: should the sensitive attribute be part of the input?
@@ -150,6 +150,7 @@ class UGPDemPar(UGP):
             target_mode: if no target rate is given, how is the target chosen?
             marginal: when doing average_prediction, should the prior of s be taken into account?
             use_lr: use logistic regression instead of Gaussian Processes
+            precision_target: how similar should target labels and true labels be
         """
         super().__init__(s_as_input=s_as_input, use_lr=use_lr)
         if s_as_input and average_prediction:
@@ -167,10 +168,13 @@ class UGPDemPar(UGP):
                 self.name += "_tar_max"
             else:
                 self.name += f"_tar_{target_mode}"
+        if precision_target != 1.0:
+            self.name += f"_pt_{precision_target}"
         self.target_acceptance = target_acceptance
         self.target_mode = target_mode
         self.average_prediction = average_prediction
         self.marginal = marginal
+        self.precision_target = precision_target
 
     def _additional_parameters(self, raw_data):
         biased_acceptance = compute_bias(raw_data['ytrain'], raw_data['strain'])
@@ -204,6 +208,8 @@ class UGPDemPar(UGP):
             average_prediction=self.average_prediction,
             p_s0=p_s[0],
             p_s1=p_s[1],
+            p_ybary0_or_ybary1_s0=self.precision_target,
+            p_ybary0_or_ybary1_s1=self.precision_target,
         )
 
 
