@@ -16,36 +16,24 @@ DataEntry = namedtuple('DataEntry', ['label', 'values', 'do_fill'])
 PlotDef = namedtuple('PlotDef', ['title', 'entries'])
 
 
-def general_plotting(plot, plot_fun, plot_def, xaxis, yaxis, legend_outside):
-    """General function that can be used to plot data in many different ways
+def common_plotting_settings(plot, plot_def, xaxis_title, yaxis_title, legend_outside):
+    """Common settings for plots
 
     Args:
         plot: a pyplot plot object
-        plot_fun: function that handles the plotting
         plot_def: a `PlotDef` that defines properties of the plot
-        xaxis: either a string or a tuple of two strings
-        yaxis: either a string or a tuple of two strings
+        xaxis_title: label for x-axis
+        yaxis_title: label for y-axis
         legend_outside: True if the legend should be outside of the plots
     """
-    if isinstance(xaxis, tuple):
-        xaxis_measure, xaxis_title = xaxis
-    else:
-        xaxis_measure, xaxis_title = [xaxis] * 2
-    if isinstance(yaxis, tuple):
-        yaxis_measure, yaxis_title = yaxis
-    else:
-        yaxis_measure, yaxis_title = [yaxis] * 2
-
-    plot_fun(plot, plot_def, xaxis_measure, yaxis_measure)
     plot.set_xlabel(xaxis_title)
     plot.set_ylabel(yaxis_title)
     plot.set_title(plot_def.title)
     plot.grid()
     if legend_outside:
         legend = plot.legend(loc='upper left', bbox_to_anchor=(1, 1))
-        return (xaxis_measure, yaxis_measure), legend
+        return legend
     plot.legend()
-    return (xaxis_measure, yaxis_measure), None
 
 
 def generate_graph(plot, plot_def, xaxis, yaxis, legend_outside=False):
@@ -59,22 +47,21 @@ def generate_graph(plot, plot_def, xaxis, yaxis, legend_outside=False):
         legend_outside: True if the legend should be outside of the plots
     """
     shapes = ['o', 'D', 's', '*', '^', 'v', '<', '>', 'p', 'X', 'P']
-
-    def _core_plot(plot, plot_def, xaxis_measure, yaxis_measure):
-        filled_counter = 0
-        for i, entry in enumerate(plot_def.entries):
-            if entry.do_fill:
-                additional_params = dict()
-                shp_index = filled_counter
-                filled_counter += 1
-            else:
-                additional_params = dict(mfc='none')
-                shp_index = i - filled_counter
-            plot.plot(
-                entry.values[xaxis_measure], entry.values[yaxis_measure], shapes[shp_index],
-                label=entry.label, **additional_params  # , c=colors[i]
-            )
-    return general_plotting(plot, _core_plot, plot_def, xaxis, yaxis, legend_outside)
+    xaxis_measure, yaxis_measure = xaxis[0], yaxis[0]
+    filled_counter = 0
+    for i, entry in enumerate(plot_def.entries):
+        if entry.do_fill:
+            additional_params = dict()
+            shp_index = filled_counter
+            filled_counter += 1
+        else:
+            additional_params = dict(mfc='none')
+            shp_index = i - filled_counter
+        plot.plot(
+            entry.values[xaxis_measure], entry.values[yaxis_measure], shapes[shp_index],
+            label=entry.label, **additional_params  # , c=colors[i]
+        )
+    return common_plotting_settings(plot, plot_def, xaxis[1], yaxis[1], legend_outside)
 
 
 def errorbox(plot, plot_def, xaxis, yaxis, legend_outside=False):
@@ -99,15 +86,53 @@ def errorbox(plot, plot_def, xaxis, yaxis, legend_outside=False):
     colors10 = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2",
                 "#7f7f7f", "#bcbd22", "#17becf"]
 
-    def _core_plot(plot, plot_def, xaxis_measure, yaxis_measure):
-        for i, entry in enumerate(plot_def.entries):
-            xmean, xstd = np.mean(entry.values[xaxis_measure]), np.std(entry.values[xaxis_measure])
-            ymean, ystd = np.mean(entry.values[yaxis_measure]), np.std(entry.values[yaxis_measure])
-            plot.bar(xmean, ystd, bottom=ymean - 0.5 * ystd, width=xstd, align='center',
-                     color='none', edgecolor=colors10[i], label=entry.label, linewidth=3,
-                     zorder=1000.)
-            plot.plot(xmean, ymean, 'ko')
-    return general_plotting(plot, _core_plot, plot_def, xaxis, yaxis, legend_outside)
+    xaxis_measure, yaxis_measure = xaxis[0], yaxis[0]
+    for i, entry in enumerate(plot_def.entries):
+        xmean, xstd = np.mean(entry.values[xaxis_measure]), np.std(entry.values[xaxis_measure])
+        ymean, ystd = np.mean(entry.values[yaxis_measure]), np.std(entry.values[yaxis_measure])
+        plot.bar(xmean, ystd, bottom=ymean - 0.5 * ystd, width=xstd, align='center', color='none',
+                 edgecolor=colors10[i], label=entry.label, linewidth=3, zorder=1000.)
+        plot.plot(xmean, ymean, 'ko')
+    return common_plotting_settings(plot, plot_def, xaxis[1], yaxis[1], legend_outside)
+
+
+def plot_all(plot_func, plot_def_list, xaxis, yaxis, save=False, legend_outside=False,
+             figsize=(20, 6), dpi=None):
+    """Plot all plot definitions in a given list. The plots will be in a single row.
+
+    Args:
+        plot_func: which kind of plot to make
+        plot_def_list: a list of `PlotDef`
+        xaxis: either a string or a tuple of two strings
+        yaxis: either a string or a tuple of two strings
+        save: True if the figure should be saved to disk
+        legend_outside: True if the legend should be outside of the plots
+        figsize: size of the whole figure
+        dpi: DPI of the figure
+    Returns:
+        the figure and the array of plots
+    """
+    # with plt.style.context('seaborn'):  # optional
+    if not isinstance(xaxis, tuple):
+        xaxis = [xaxis] * 2
+    if not isinstance(yaxis, tuple):
+        yaxis = [yaxis] * 2
+    fig, plots = plt.subplots(ncols=len(plot_def_list), squeeze=False, figsize=figsize)
+    legends = []
+    for plot, plot_def in zip(plots[0], plot_def_list):
+        legend = plot_func(plot, plot_def, xaxis, yaxis, legend_outside)
+        if legend is not None:
+            legends.append(legend)
+    if not save:
+        return fig, plots
+    save_path = Path("results") / Path("analysis") / Path(plot_def_list[0].title)
+    save_path.mkdir(parents=True, exist_ok=True)
+    figure_path = str(save_path / Path(f"{xaxis[0]}-{yaxis[0]}.png"))
+    if legend_outside:
+        fig.savefig(figure_path, dpi=dpi, bbox_extra_artists=legends, bbox_inches='tight')
+    else:
+        fig.savefig(figure_path, dpi=dpi)
+    # print(xaxis_measure, yaxis_measure)
 
 
 def parse(filename, condition=None, mapping=None):
@@ -207,41 +232,6 @@ def parse_and_plot_all(filenames_and_titles, xaxis, yaxis, condition=None, mappi
     """Parse the given files and then plot the given x- and y-axis"""
     data = parse_all(filenames_and_titles, condition, mapping)
     return plot_all(generate_graph, data, xaxis, yaxis)
-
-
-def plot_all(plot_func, plot_def_list, xaxis, yaxis, save=False, legend_outside=False,
-             figsize=(20, 6), dpi=None):
-    """Plot all plot definitions in a given list. The plots will be in a single row.
-
-    Args:
-        plot_func: which kind of plot to make
-        plot_def_list: a list of `PlotDef`
-        xaxis: either a string or a tuple of two strings
-        yaxis: either a string or a tuple of two strings
-        save: True if the figure should be saved to disk
-        legend_outside: True if the legend should be outside of the plots
-        figsize: size of the whole figure
-        dpi: DPI of the figure
-    Returns:
-        the figure and the array of plots
-    """
-    # with plt.style.context('seaborn'):  # optional
-    fig, plots = plt.subplots(ncols=len(plot_def_list), squeeze=False, figsize=figsize)
-    legends = []
-    for plot, plot_def in zip(plots[0], plot_def_list):
-        axes, legend = plot_func(plot, plot_def, xaxis, yaxis, legend_outside)
-        if legend is not None:
-            legends.append(legend)
-    if not save:
-        return fig, plots
-    save_path = Path("results") / Path("analysis") / Path(plot_def_list[0].title)
-    save_path.mkdir(parents=True, exist_ok=True)
-    figure_path = str(save_path / Path(f"{axes[0]}-{axes[1]}.png"))
-    if legend_outside:
-        fig.savefig(figure_path, dpi=dpi, bbox_extra_artists=legends, bbox_inches='tight')
-    else:
-        fig.savefig(figure_path, dpi=dpi)
-    # print(xaxis_measure, yaxis_measure)
 
 
 def start_filter(startswith):
