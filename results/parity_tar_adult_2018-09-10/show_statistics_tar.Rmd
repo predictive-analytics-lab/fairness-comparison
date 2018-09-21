@@ -1,0 +1,125 @@
+---
+title: "simple"
+author: "Zc223"
+date: "28/08/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(stringr)
+library(ggplot2)
+library(dplyr)
+library(magrittr)
+library(corrplot)
+library(robust)
+library(ggpubr)
+library(fit.models)
+library(matrixStats)
+library(xlsx)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+algos_to_plot = c(
+  "UGP_dem_par_in_True_tar_0.1", "UGP_dem_par_in_True_tar_0.2", "UGP_dem_par_in_True_tar_0.3", "UGP_dem_par_in_True_tar_0.4", "UGP_dem_par_in_True_tar_0.5",
+  "UGP_dem_par_in_False_tar_0.1", "UGP_dem_par_in_False_tar_0.2", "UGP_dem_par_in_False_tar_0.3", "UGP_dem_par_in_False_tar_0.4", "UGP_dem_par_in_False_tar_0.5"
+)
+
+mean_std_summary = function(df, x_var, y_var, z0_var, z1_var) {
+  quo_x_var = enquo(x_var)
+  quo_y_var = enquo(y_var)
+  quo_z0_var = enquo(z0_var)
+  quo_z1_var = enquo(z1_var)
+  
+  sensitivity_summary = 
+    df %>% 
+    group_by(algorithm) %>% 
+    summarise(x_sd=sd(!!quo_x_var), x_mean=mean(!!quo_x_var), 
+              y_sd=sd(!!quo_y_var), y_mean=mean(!!quo_y_var),
+              z0_sd=sd(!!quo_z0_var), z0_mean=mean(!!quo_z0_var),
+              z1_sd=sd(!!quo_z1_var), z1_mean=mean(!!quo_z1_var)
+    )
+  sensitivity_summary
+}
+
+show_mean_std = function(name, var1="DIbinary", var2="accuracy", z0="0-PR-race", z1="1-PR-race",algos=algos_to_plot) {
+  
+  df = read.csv(str_c(name, "_numerical-binsensitive.csv"), check.names=FALSE) %>%
+    filter(algorithm %in% algos) %>%
+    # mutate(algorithm=recode(algorithm, ZafarFairness="ZafarFairness")) # rename to Zafar for clarity
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.1"="FairGPparity*, target=0.1"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.2"="FairGPparity*, target=0.2"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.3"="FairGPparity*, target=0.3"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.4"="FairGPparity*, target=0.4"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.5"="FairGPparity*, target=0.5"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.1"="FairGPparity, target=0.1"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.2"="FairGPparity, target=0.2"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.3"="FairGPparity, target=0.3"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.4"="FairGPparity, target=0.4"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.5"="FairGPparity, target=0.5"))
+  
+  x_var = as.name(var1)
+  y_var = as.name(var2)
+  z0_var = as.name(z0)
+  z1_var = as.name(z1)
+  
+  sensitivity_summary = mean_std_summary(df, !!x_var, !!y_var, !!z0_var, !!z1_var)
+  
+  filename = paste(name, "_mean_std.xlsx")
+  write.xlsx(sensitivity_summary, filename, sheetName=name)
+}
+
+
+# dataset setting
+file_name = list("adult_race", "adult_sex")
+file_attribute = list("race", "sex")
+N_file = length(file_name)
+```
+
+## Algorithm sensitivity variable_1 vs variable_2
+
+```{r}
+
+variable_1 = "DIbinary"
+add_for_1 = 0
+
+variable_2 = "accuracy"
+add_for_2 = 0
+
+variable_3 = "0-PR"
+add_for_3 = 1
+
+variable_4 = "1-PR"
+add_for_4 = 1
+
+for (i in 1:N_file) {
+  if(add_for_1){
+    var1_name = paste(file_attribute[i], "-", variable_1, sep="")
+  } else {
+    var1_name = variable_1
+  }
+  if(add_for_2){
+    var2_name = paste(file_attribute[i], "-", variable_2, sep="")
+  } else {
+    var2_name = variable_2
+  }
+  if(add_for_3){
+    var3_name = paste(variable_3, "-", file_attribute[i], sep="")
+  } else {
+    var3_name = variable_3
+  }
+  if(add_for_4){
+    var4_name = paste(variable_4, "-", file_attribute[i], sep="")
+  } else {
+    var4_name = variable_4
+  }
+  
+  show_mean_std(file_name[i], var1 = var1_name, var2 = var2_name, z0=var3_name, z1=var4_name)
+}
+
+```

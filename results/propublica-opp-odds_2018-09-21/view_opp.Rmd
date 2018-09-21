@@ -1,0 +1,438 @@
+---
+title: "View_analysis"
+author: "Zc223"
+date: "10/09/2018"
+output: html_document
+---
+
+# Function definitions, setup
+
+```{r}
+library(stringr)
+library(ggplot2)
+library(dplyr)
+library(magrittr)
+library(corrplot)
+library(robust)
+library(ggpubr)
+library(fit.models)
+library(matrixStats)
+```
+
+## Global setting
+
+```{r global setting}
+# Use these for more than 10 algorithms
+colors_20 = c(
+  "#1f77b4", "#aec7e8", "#ff7f0e", "#ffbb78", "#2ca02c", "#98df8a", "#d62728", "#ff9896",
+  "#9467bd", "#c5b0d5", "#8c564b", "#c49c94", "#e377c2", "#f7b6d2", "#7f7f7f", "#c7c7c7",
+  "#bcbd22", "#dbdb8d", "#17becf", "#9edae5")
+
+# Use these for 10 or fewer algorithms
+colors_10 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf")
+symbol = c(21:24, 1, 0, 5, 2,# 6,
+           7:14, 3, 4)
+# symbol = c(15:18, 3, 4, 5, 7:14)
+full_baseline = c(
+  # "GaussianNB", 
+  "LR", 
+  "DecisionTree", 
+  "DT",
+  #                "Calders", 
+  #                "Kamishima", 
+  "GP", 
+  "SVM", 
+  "ZafarEqOpp"
+  #               "ZafarBaseline"
+)
+
+catscale10  = scale_colour_manual(values=colors_10)
+catscale10_2 = scale_fill_manual(values=colors_10)
+
+catscale20  = scale_colour_manual(values=colors_20)
+catscale20_2 = scale_fill_manual(values=colors_20)
+
+true_name = character()
+false_name = character()
+
+true_tnr0 = character()
+false_tnr0 = character()
+true_tnr1 = character()
+false_tnr1 = character()
+
+true_tnr00 = character()
+false_tnr00 = character()
+true_tnr11 = character()
+false_tnr11 = character()
+
+true_tpr = character()
+false_tpr = character()
+
+# value_set = c("1.0", "0.95", "0.9", "0.8", "0.7", "0.6")
+tnr_num = c(0.1,0.3,0.5,0.7,0.9)
+tpr_num = c(0.6, 0.7, 0.8, 0.9)
+
+for(i in tnr_num){
+  for(j in tnr_num){
+    for(k in tpr_num){
+      true_name = c(true_name, paste("FairGPopp*, 0-TNR=", i, ", 1-TNR=", 
+                                     j, ", TPR=", k, sep = ""))
+      true_tnr0 = c(true_tnr0, paste("FairGPopp*, 0-TNR=", i, sep = ""))
+      true_tnr1 = c(true_tnr1, paste("FairGPopp*, 1-TNR=", j, sep = ""))
+      
+      true_tnr00 = c(true_tnr00, paste("FairGPopp*, 1-TNR=", i, sep = ""))
+      true_tnr11 = c(true_tnr11, paste("FairGPopp*, 0-TNR=", j, sep = ""))
+      
+      
+      true_tpr = c(true_tpr, paste("FairGPopp*, TPR=", k, sep = ""))
+      
+      false_name = c(false_name, paste("FairGPopp, 0-TNR=", i, ", 1-TNR=", 
+                                       j, ", TPR=", k, sep = ""))
+      false_tnr0 = c(false_tnr0, paste("FairGPopp, 0-TNR=", i, sep = ""))
+      false_tnr1 = c(false_tnr1, paste("FairGPopp, 1-TNR=", j, sep = ""))
+      
+      false_tnr00 = c(false_tnr00, paste("FairGPopp, 1-TNR=", i, sep = ""))
+      false_tnr11 = c(false_tnr11, paste("FairGPopp, 0-TNR=", j, sep = ""))
+      false_tpr = c(false_tpr, paste("FairGPopp, TPR=", k, sep = ""))      
+    }
+  }
+}
+
+algos_full = c(false_name)
+tnr0_full = c(false_tnr0)
+tnr1_full = c(false_tnr1)
+
+tnr00_full = c(false_tnr00)
+tnr11_full = c(false_tnr11)
+tpr_full = c(false_tpr)
+
+```
+
+## Function
+
+```{r scatter plot}
+
+make_scatter_figure = function(name, var1="CV", var2="accuracy", algos=algos_full, view="algorithm",
+                               setTNR0 = tnr0_full, setTNR1 = tnr1_full, setTPRset = tpr_full, 
+                               display="off", statistic = "off", baseline=full_baseline) {
+  x_var = as.name(var1)
+  y_var = as.name(var2)
+  target_view = as.name(view)
+  df = read.csv(str_c(name, "_numerical-binsensitive.csv"), check.names=FALSE)
+  # df = read.csv(str_c(name, "_numerical-binsensitive.csv"), check.names=FALSE)%>%
+  #   #    filter(algorithm %in% algos & TNR0set%in% setTNR0 & TNR1set%in% setTNR1 & TPRset %in% setTPRset)
+  #   filter(TNR0set%in% setTNR0 & TNR1set%in% setTNR1 & TPRset %in% setTPRset)
+  print(df)
+  switch (statistic,
+          median = {
+            switch (view,
+                    algorithm ={
+                      num = length(algos)
+                      variable = algos
+                    },
+                    TPRset = {
+                      num = length(unique(setTPRset))
+                      variable = unique(setTPRset)
+                    },
+                    TNR0set = {
+                      num = length(unique(setTNR0))
+                      variable = unique(setTNR0)
+                    },
+                    TNR1set = {
+                      num = length(unique(setTNR1))
+                      variable = unique(setTNR1)
+                    }
+            )
+            new_df = matrix(nrow=num,ncol=2, dimnames =list(1:num, c(var1, var2)))
+            for(j in 1:num){
+              temp_data = df[which(df[[view]]==variable[j]),c(var1, var2)]
+              new_df[j, ] =  colMedians(data.matrix(temp_data))
+            }
+            dataFrame <- data.frame(new_df)
+            names(dataFrame) <- c(var1,var2)
+            dataFrame[[view]] <- variable
+          },
+          mean = {
+            switch (view,
+                    algorithm ={
+                      num = length(algos)
+                      variable = algos
+                    },
+                    TPRset = {
+                      num = length(unique(setTPRset))
+                      variable = unique(setTPRset)
+                    },
+                    TNR0set = {
+                      num = length(unique(setTNR0))
+                      variable = unique(setTNR0)
+                    },
+                    TNR1set = {
+                      num = length(unique(setTNR1))
+                      variable = unique(setTNR1)
+                    }
+            )
+            new_df = matrix(nrow=num,ncol=2, dimnames =list(1:num, c(var1, var2)))
+            for(j in 1:num){
+              temp_data = df[which(df[[view]]==variable[j]),c(var1, var2)]
+              new_df[j, ] =  colMeans(data.matrix(temp_data))
+            }
+            dataFrame <- data.frame(new_df)
+            names(dataFrame) <- c(var1,var2)
+            dataFrame[[view]] <- variable
+          },
+          mean_of_repeats = {
+            num = length(algos)
+            switch (view,
+                    algorithm ={
+                      variable = algos
+                    },
+                    TPRset = {
+                      variable = setTPRset
+                    },
+                    TNR0set = {
+                      variable = setTNR0
+                    },
+                    TNR1set = {
+                      variable = setTNR1
+                    }
+            )
+            new_df = matrix(nrow=num,ncol=2, dimnames =list(1:num, c(var1, var2)))
+            for(j in 1:num){
+              temp_data = df[which(df$algorithm==algos[j]),c(var1, var2)]
+              new_df[j, ] =  colMeans(data.matrix(temp_data))
+            }
+            dataFrame <- data.frame(new_df)
+            names(dataFrame) <- c(var1,var2)
+            # dataFrame$algorithms <- algos
+            dataFrame[[view]] = variable
+          },
+          off = {
+            dataFrame = df
+          }
+  )
+  color_used = catscale10
+  color_used_2 = catscale10_2
+  
+  if(is.character(baseline)){
+    df_baseline = read.csv(str_c(name, "_baseline.csv"), check.names=FALSE)%>%
+      filter(algorithm %in% baseline)
+    
+    num_baseline = length(baseline)
+    new_df_baseline = matrix(nrow=num_baseline,ncol=2, dimnames =list(1:num_baseline, c(var1, var2)))
+    for(j in 1:num_baseline){
+      temp_baseline = df_baseline[which(df_baseline$algorithm==baseline[j]),c(var1, var2)]
+      new_df_baseline[j, ] =  colMeans(data.matrix(temp_baseline))
+    }
+    dataFrame_baseline <- data.frame(new_df_baseline)
+    names(dataFrame_baseline) <- c(var1,var2)
+    #dataFrame$algorithm <- algos
+    dataFrame_baseline[[view]] = baseline
+    
+    color_used = catscale20
+    color_used_2 = catscale20_2
+    
+    dataFrame = rbind(dataFrame, dataFrame_baseline)
+  }
+  
+  # # switch the group
+  # if(var1=="sex-TPRDiff"){
+  #   dataFrame[[x_var]] = 2 - dataFrame[[x_var]]
+  #   switch(view,
+  #          "TNR0set" = {
+  #            dataFrame[[view]] = c(tnr11_full, full_baseline)
+  #            # view = "TNR1set"
+  #            # names(dataFrame)[names(dataFrame) == "TNR0set"] <- view
+  #            },
+  #          "TNR1set" = {
+  #            dataFrame[[view]] = c(tnr00_full, full_baseline)
+  #            # view = "TNR1set"
+  #            # names(dataFrame)[names(dataFrame) == "TNR1set"] <- view
+  #            }
+  #   )
+  #   target_view = as.name(view)
+  #   
+  # }
+  # dataFrame[[view]] = factor(dataFrame[[view]], levels= unique(dataFrame[[view]])) 
+  
+  # Scatterplot
+  if(grepl("sex", var1)){
+    var1 = gsub('sex', 'gender', var1)
+  }
+  if(grepl("sex", var2)){
+    var2 = gsub('sex', 'gender', var2)
+  }
+  if(grepl("sex", name)){
+    name = gsub('sex', 'gender', name)
+  }
+  print(dataFrame)
+  fig_title = paste(name, "(", statistic, ")", sep="")
+  switch(display,
+         off = ggplot(dataFrame, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
+           geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) + theme_bw() + 
+           labs(y=var2, x=var1, title=name),
+         title = ggplot(dataFrame, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
+           geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) + theme_bw() + 
+           labs(y=var2, x=var1, title=fig_title),
+         captain = ggplot(dataFrame, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
+           geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) + theme_bw() + 
+           labs(y=var2, x=var1, caption = str_c(name, "_numerical-binsensitive.csv")),
+         all = ggplot(dataFrame, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
+           geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) + theme_bw() + 
+           labs(y=var2, x=var1, title=fig_title)
+  )
+}
+
+```
+
+## Users setting
+
+```{r Users setting}
+file_name = c("propublica-recidivism_race","propublica-recidivism_sex")
+file_attribute = c( "race", "sex")
+
+N_file = length(file_name)
+
+```
+
+## Algorithm accuracy vs fairness (group-TPRDiff) all points
+
+```{r scatter plot for all points}
+variable_1 = "TPRDiff"
+add_for_1 = 1
+target = "accuracy"
+add_for_target = 0
+
+# view_set = c("TPRset", "TNR0set", "TNR1set")
+# 
+# for (i in 1:N_file) {
+#   for (view_from in view_set){
+#     if(add_for_target){
+#       target_name = paste(file_attribute[i], "-", target, sep="")
+#     } else {
+#       target_name = target
+#     }
+#     if(add_for_1){
+#       var1_name = paste(file_attribute[i], "-", variable_1, sep="")
+#     } else {
+#       var1_name = variable_1
+#     }
+#     
+#     q = make_scatter_figure(file_name[i], var1=var1_name, var2=target_name, baseline=0,
+#                             view=view_from, display = "all", statistic = "mean_of_repeats")
+#     print(q)
+#     # export_name = paste(file_name[i], view_from,"_opp.eps", sep="")
+#     # ggsave(export_name, q)
+#   }
+# }
+```
+
+## Algorithm accuracy vs fairness (group-TPRDiff) for the points (tnr0 = tnr1 = 1)
+
+```{r scatter plot for tnr0 =tnr1 = 1}
+view_from = c("TPRset")
+tnr0_use = c(paste("FairGPopp, 0-TNR=", 1, sep = ""),paste("FairGPopp*, 0-TNR=", 1, sep = ""))
+tnr1_use = c(paste("FairGPopp, 1-TNR=", 1, sep = ""),paste("FairGPopp*, 1-TNR=", 1, sep = ""))
+
+for (i in 1:N_file) {
+  if(add_for_target){
+    target_name = paste(file_attribute[i], "-", target, sep="")
+  } else {
+    target_name = target
+  }
+  if(add_for_1){
+    var1_name = paste(file_attribute[i], "-", variable_1, sep="")
+  } else {
+    var1_name = variable_1
+  }
+  
+  q = make_scatter_figure(file_name[i], var1=var1_name, var2=target_name, baseline=0,
+                          setTNR0 = tnr0_use, setTNR1 = tnr1_use, 
+                          view=view_from, display = "off")
+  print(q)
+  
+  export_name = paste(file_name[i], view_from,"_odd_DIacc.eps", sep="")
+  #ggsave(export_name, q)
+}
+
+```
+
+```{r scatter plot for tnr0 =tnr1 = 1, 1- TPR vs 0-TPR}
+variable_3 = "0-TPR"
+add_for_3 = 1
+variable_4 = "1-TPR"
+add_for_4 = 1
+
+for (i in 1:N_file) {
+  if(add_for_3){
+    var3_name = paste(variable_3, "-", file_attribute[i], sep="")
+  } else {
+    var3_name = variable_3
+  }
+  if(add_for_4){
+    var4_name = paste(variable_4, "-", file_attribute[i], sep="")
+  } else {
+    var4_name = variable_4
+  }
+  
+  p = make_scatter_figure(file_name[i], var1=var3_name, var2=var4_name, baseline=0,
+                          setTNR0 = tnr0_use, setTNR1 = tnr1_use, 
+                          view=view_from, display = "off")
+  print(p)
+  
+  export_name = paste(file_name[i], view_from,"_odd_tpr.eps", sep="")
+  # ggsave(export_name, p)
+}
+
+```
+
+## Algorithm accuracy vs fairness (group-TPRDiff) in terms of mean
+
+# ```{r plot for means}
+# for (i in 1:N_file) {
+#   for (view_from in view_set){
+#     if(add_for_target){
+#       target_name = paste(file_attribute[i], "-", target, sep="")
+#     } else {
+#       target_name = target
+#     }
+#     if(add_for_1){
+#       var1_name = paste(file_attribute[i], "-", variable_1, sep="")
+#     } else {
+#       var1_name = variable_1
+#     }
+#     
+#     q = make_scatter_figure(file_name[i], var1=var1_name, var2=target_name, 
+#                             view=view_from, display = "all", statistic = "mean")
+#     print(q)
+#     export_name = paste(file_name[i], "_odds.eps", sep="")
+#     # ggsave(export_name, q)
+#   }
+#   
+# }
+# ```
+
+## Algorithm accuracy vs fairness (group-TPRDiff) in terms of median
+
+# ```{r plot for medians}
+# for (i in 1:N_file) {
+#   for (view_from in view_set){
+#     if(add_for_target){
+#       target_name = paste(file_attribute[i], "-", target, sep="")
+#     } else {
+#       target_name = target
+#     }
+#     if(add_for_1){
+#       var1_name = paste(file_attribute[i], "-", variable_1, sep="")
+#     } else {
+#       var1_name = variable_1
+#     }
+#     
+#     q = make_scatter_figure(file_name[i], var1=var1_name, var2=target_name, 
+#                             view=view_from, display = "all", statistic = "median")
+#     print(q)
+#     export_name = paste(file_name[i], "_odds.eps", sep="")
+#     # ggsave(export_name, q)
+#   }
+#   
+# }
+# ```
