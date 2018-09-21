@@ -333,6 +333,6 @@ for (i in 1:N_file) {
   q_2 = make_scatter_figure(file_name[i], var1=var1_name, var2=var2_name, display = "all")
   print(q_2)
   export_name = paste(file_name[i], "_PR.eps", sep="")
-  ggsave(export_name, q_2)
+  # ggsave(export_name, q_2)
 }
 ```

@@ -16,6 +16,7 @@ library(corrplot)
 library(robust)
 library(ggpubr)
 library(fit.models)
+library(xlsx)
 ```
 
 We'll be showing many different charts with a large number of different attributes, so a good
@@ -40,10 +41,10 @@ catscale20_2 = scale_fill_manual(values=colors_20)
 baseline_to_plot = c(
   "GP", 
   "SVM", 
-  "ZafarEqOpp",
+  "ZafarEqOpp"
   # "GaussianNB", 
-  "LR",
-  "DecisionTree"
+  # "LR",
+  # "DecisionTree"
   #"Calders", 
   #"Kamishima" 
   #               "ZafarBaseline"
@@ -72,8 +73,16 @@ create_sensitivity_summary = function(df, x_var, y_var) {
 }
 
 basic_sensitivity_plot = function(sensitivity_summary, x_var, y_var) {
+  if(grepl("sex", quo_name(enquo(x_var)))){
+    label_x = gsub('sex', 'gender', quo_name(enquo(x_var)))
+  } else {label_x = quo_name(enquo(x_var))}
+  
+  if(grepl("sex", quo_name(enquo(y_var)))){
+    label_y = gsub('sex', 'gender', quo_name(enquo(y_var)))
+  } else {label_y = quo_name(enquo(y_var))}
+  
   ggplot(sensitivity_summary, aes(x=x_mean, y=y_mean, colour=algorithm)) + catscale10 + catscale10_2 +
-    xlab(quo_name(enquo(x_var))) + ylab(quo_name(enquo(y_var)))
+    xlab(label_x) + ylab(label_y)
 }
 
 plot_lines_sensitity_summary = function(basic_plot) {
@@ -101,8 +110,8 @@ plot_rects_sensitivity_summary = function(basic_plot) {
                     ymin = y_mean - 0.5 * y_sd, 
                     ymax = y_mean + 0.5 * y_sd,
                     colour=algorithm)
-  basic_plot +
-    geom_rect(aesthetics1, alpha=0.15) +
+  basic_plot + theme_bw() + geom_point(aes(x_mean, y_mean), size = 2) + 
+    geom_rect(aesthetics1, alpha=0.5, size=1.5) + 
     geom_rect(aesthetics2, fill=NA)
 }
 
@@ -137,7 +146,7 @@ nb_measure_comparison = function(name, measure) {
 plot_sensitivity = function(df, var1, var2) {
   x_var = as.name(var1)
   y_var = as.name(var2)
-
+  
   sensitivity_summary = create_sensitivity_summary(df, !!x_var, !!y_var)
   basic_plot = basic_sensitivity_plot(sensitivity_summary, !!x_var, !!y_var)
   plot_rects_sensitivity_summary(basic_plot)
@@ -164,12 +173,20 @@ make_sensitivity_figure = function(name, var1="DIbinary", var2="accuracy",
   df$algorithm = factor(df$algorithm, levels= order) 
   
   show_mean_std(name, df, var1, var2)
-  plot_sensitivity(df, var1, var2)
+  
+  if(grepl("sex", name)){
+    name = gsub('sex', 'gender', name)
+    plot_sensitivity(df, var1, var2)  + ggtitle(name) + xlim(0.75, 0.95)
+  }else{
+    plot_sensitivity(df, var1, var2)  + ggtitle(name) + xlim(1.05, 1.25)
+  }
+  
+  
 }
 
 # dataset setting
-file_name = list("propublica-recidivism_race", "propublica-recidivism_sex")
-file_attribute = list("race", "sex")
+file_name = c("propublica-recidivism_race", "propublica-recidivism_sex")
+file_attribute = c("race", "sex")
 N_file = length(file_name)
 
 ```
@@ -195,11 +212,10 @@ for (i in 1:N_file) {
   } else {
     var2_name = variable_2
   }
-  p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name) +
-    ggtitle(paste(file_name[i], "dataset,", file_attribute[i], "attribute"))
+  p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
   print(p)
   export_name = paste(file_name[i], "_opp_box.eps", sep="")
-  #ggsave(export_name, p)
+  ggsave(export_name, p)
 }
 
 ```
