@@ -36,8 +36,8 @@ def common_plotting_settings(plot, plot_def, xaxis_title, yaxis_title, legend_ou
     plot.legend()
 
 
-def generate_graph(plot, plot_def, xaxis, yaxis, legend_outside=False):
-    """Generate a single plot
+def scatter(plot, plot_def, xaxis, yaxis, legend_outside=False):
+    """Generate a scatter plot
 
     Args:
         plot: a pyplot plot object
@@ -135,49 +135,65 @@ def plot_all(plot_func, plot_def_list, xaxis, yaxis, save=False, legend_outside=
     # print(xaxis_measure, yaxis_measure)
 
 
-def parse(filename, condition=None, mapping=None):
+def parse(filename, filter_transform=None):
     """Parse a file
 
-    You can pass a function as `condition` that decides whether a given
-    algorithm should be included.
-    You can pass a function as `mapping` that changes the algorithm names
+    You can pass a function as `condition` that decides whether a given algorithm should be
+    included. You can pass a function as `mapping` that changes the algorithm names.
 
     Args:
         filename: a string with the filename
-        condition: (optional) a function that takes an algorithm name
-                   and returns True or False (i.e. a predicate)
-        mapping: (optional) a function that takes an algorithm name
-                 and returns a replacement name and a boolean that decides
-                 if the corresponding marker is filled or not
+        filter_transform: (optional) a function that takes an algorithm name and returns a
+                          replacement name and a boolean that decides if the corresponding marker is
+                          filled or returns `None`
     Returns:
         a list of `DataEntry` with algorithm name, Pandas dataframe and fill indicator
     """
-    no_cond = (condition is None)
-    no_map = (mapping is None)
     raw_data = pd.read_csv(filename)
     to_plot = []
     for algo_name, values in raw_data.groupby('algorithm'):
-        if no_cond or condition(algo_name):
-            new_algo_name, do_fill = (algo_name, True) if no_map else mapping(algo_name)
+        algo_info = (algo_name, True) if filter_transform is None else filter_transform(algo_name)
+        if algo_info is not None:
+            new_algo_name, do_fill = algo_info
             to_plot.append(DataEntry(label=new_algo_name, values=values, do_fill=do_fill))
     return to_plot
 
 
-def parse_for_plot(filename, title, condition=None, mapping=None):
+def filter_transform_labels(plot_defs, filter_transform):
+    """Filter out and transform entries according to the given function
+
+    Args:
+        plot_defs: list of plot definitions
+        filter_transform: a function that takes an algorithm name and either returns `None` or a
+                          transformed name
+    Returns:
+        list of `PlotDef` with filtered out entries
+    """
+    new_plot_defs = []
+    for plot_def in plot_defs:
+        new_entries = []
+        for entry in plot_def.entries:
+            algo_info = filter_transform(entry.label)
+            if algo_info is not None:
+                new_algo_name, do_fill = algo_info
+                new_entries.append(entry._replace(label=new_algo_name, do_fill=do_fill))
+        new_plot_defs.append(plot_def._replace(entries=new_entries))
+    return new_plot_defs
+
+
+def parse_for_plot(filename, title, filter_transform=None):
     """Parse a file and create a `PlotDef` from it
 
     Args:
         filename: a string with the filename
         title: title of the plot
-        condition: (optional) a function that takes an algorithm name
-                   and returns True or False (i.e. a predicate)
-        mapping: (optional) a function that takes an algorithm name
-                 and returns a replacement name and a boolean that decides
-                 if the corresponding marker is filled or not
+        filter_transform: (optional) a function that takes an algorithm name and returns a
+                          replacement name and a boolean that decides if the corresponding marker is
+                          filled or returns `None`
     Returns:
         a `PlotDef` with a plot title and a list of entries
     """
-    return PlotDef(title, parse(filename, condition, mapping))
+    return PlotDef(title, parse(filename, filter_transform))
 
 
 def transform(entries, key, transformation):
@@ -211,27 +227,25 @@ def transform_all(plot_def_list, key, transformation):
     return new_plot_defs
 
 
-def parse_all(filenames_and_titles, condition=None, mapping=None):
+def parse_all(filenames_and_titles, filter_transform=None):
     """Parse all given files
 
     Args:
         filenames_and_titles: a list of tuples with a filename and a title
-        condition: (optional) a function that takes an algorithm name
-                   and returns True or False (i.e. a predicate)
-        mapping: (optional) a function that takes an algorithm name
-                 and returns a replacement name and a boolean that decides
-                 if the corresponding marker is filled or not
+        filter_transform: (optional) a function that takes an algorithm name and returns a
+                          replacement name and a boolean that decides if the corresponding marker is
+                          filled or returns `None`
     Returns:
         a list of `PlotDef`, each with a plot title and a list of entries
     """
-    return [parse_for_plot(filename, title, condition, mapping)
+    return [parse_for_plot(filename, title, filter_transform)
             for filename, title in filenames_and_titles]
 
 
-def parse_and_plot_all(filenames_and_titles, xaxis, yaxis, condition=None, mapping=None):
+def parse_and_plot_all(filenames_and_titles, xaxis, yaxis, filter_transform=None):
     """Parse the given files and then plot the given x- and y-axis"""
-    data = parse_all(filenames_and_titles, condition, mapping)
-    return plot_all(generate_graph, data, xaxis, yaxis)
+    data = parse_all(filenames_and_titles, filter_transform)
+    return plot_all(scatter, data, xaxis, yaxis)
 
 
 def start_filter(startswith):
