@@ -30,8 +30,13 @@ colors_20 = c(
 
 # Use these for 10 or fewer algorithms
 colors_10 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf")
-symbol = c(21:24, 1, 0, 5, 2,# 6,
+# for 4 points
+# symbol = c(21:24, 1, 0, 5, 2,# 6,
+#            7:14, 3, 4)
+# for 5 points
+symbol = c(21:25, 1, 0, 5, 2, 6,
            7:14, 3, 4)
+
 # symbol = c(15:18, 3, 4, 5, 7:14)
 full_baseline = c(
   # "GaussianNB", 
@@ -69,42 +74,44 @@ true_tpr = character()
 false_tpr = character()
 
 # value_set = c("1.0", "0.95", "0.9", "0.8", "0.7", "0.6")
-tnr_num = c(0.1,0.3,0.5,0.7,0.9)
-tpr_num = c(0.6, 0.7, 0.8, 0.9)
 
-for(i in tnr_num){
-  for(j in tnr_num){
-    for(k in tpr_num){
-      true_name = c(true_name, paste("FairGPopp*, 0-TNR=", i, ", 1-TNR=", 
-                                     j, ", TPR=", k, sep = ""))
-      true_tnr0 = c(true_tnr0, paste("FairGPopp*, 0-TNR=", i, sep = ""))
-      true_tnr1 = c(true_tnr1, paste("FairGPopp*, 1-TNR=", j, sep = ""))
+tnr_num = c(0.1, 0.3, 0.5, 0.7, 0.9)
+tpr_num = c("0.6", "0.7", "0.8", "0.9", "1.0")
+
+for (i in tnr_num) {
+  for (j in tnr_num) {
+    for (k in tpr_num) {
+      true_name = c(true_name, paste("FairGPopp*, 0-TNR=", i , ", 1-TNR=", 
+                                     j , ", TPR=", 
+                                     k , sep = ""))
+      true_tnr0 = c(true_tnr0, paste("FairGPopp*, 0-TNR=", i , sep = ""))
+      true_tnr1 = c(true_tnr1, paste("FairGPopp*, 1-TNR=", j , sep = ""))
       
-      true_tnr00 = c(true_tnr00, paste("FairGPopp*, 1-TNR=", i, sep = ""))
-      true_tnr11 = c(true_tnr11, paste("FairGPopp*, 0-TNR=", j, sep = ""))
+      true_tnr00 = c(true_tnr00, paste("FairGPopp*, 1-TNR=", i , sep = ""))
+      true_tnr11 = c(true_tnr11, paste("FairGPopp*, 0-TNR=", j , sep = ""))
       
       
-      true_tpr = c(true_tpr, paste("FairGPopp*, TPR=", k, sep = ""))
+      true_tpr = c(true_tpr, paste("FairGPopp*, TPR=", k , sep = ""))
       
-      false_name = c(false_name, paste("FairGPopp, 0-TNR=", i, ", 1-TNR=", 
-                                       j, ", TPR=", k, sep = ""))
-      false_tnr0 = c(false_tnr0, paste("FairGPopp, 0-TNR=", i, sep = ""))
-      false_tnr1 = c(false_tnr1, paste("FairGPopp, 1-TNR=", j, sep = ""))
+      false_name = c(false_name, paste("FairGPopp, 0-TNR=", i , ", 1-TNR=", 
+                                       j , ", TPR=", 
+                                       k , sep = ""))
+      false_tnr0 = c(false_tnr0, paste("FairGPopp, 0-TNR=", i , sep = ""))
+      false_tnr1 = c(false_tnr1, paste("FairGPopp, 1-TNR=", j , sep = ""))
       
-      false_tnr00 = c(false_tnr00, paste("FairGPopp, 1-TNR=", i, sep = ""))
-      false_tnr11 = c(false_tnr11, paste("FairGPopp, 0-TNR=", j, sep = ""))
-      false_tpr = c(false_tpr, paste("FairGPopp, TPR=", k, sep = ""))      
+      false_tnr00 = c(false_tnr00, paste("FairGPopp, 1-TNR=", i , sep = ""))
+      false_tnr11 = c(false_tnr11, paste("FairGPopp, 0-TNR=", j , sep = ""))
+      false_tpr = c(false_tpr, paste("FairGPopp, TPR=", k , sep = ""))
     }
   }
 }
+algos_full = c(false_name, true_name)
+tnr0_full = c(false_tnr0, true_tnr0)
+tnr1_full = c(false_tnr1, true_tnr1)
 
-algos_full = c(false_name)
-tnr0_full = c(false_tnr0)
-tnr1_full = c(false_tnr1)
-
-tnr00_full = c(false_tnr00)
-tnr11_full = c(false_tnr11)
-tpr_full = c(false_tpr)
+tnr00_full = c(false_tnr00, true_tnr00)
+tnr11_full = c(false_tnr11, true_tnr11)
+tpr_full = c(false_tpr, true_tpr)
 
 ```
 
@@ -118,11 +125,11 @@ make_scatter_figure = function(name, var1="CV", var2="accuracy", algos=algos_ful
   x_var = as.name(var1)
   y_var = as.name(var2)
   target_view = as.name(view)
-  df = read.csv(str_c(name, "_numerical-binsensitive.csv"), check.names=FALSE)
-  # df = read.csv(str_c(name, "_numerical-binsensitive.csv"), check.names=FALSE)%>%
-  #   #    filter(algorithm %in% algos & TNR0set%in% setTNR0 & TNR1set%in% setTNR1 & TPRset %in% setTPRset)
-  #   filter(TNR0set%in% setTNR0 & TNR1set%in% setTNR1 & TPRset %in% setTPRset)
-  print(df)
+  
+  df = read.csv(str_c(name, "_numerical-binsensitive.csv"), check.names=FALSE)%>%
+    #    filter(algorithm %in% algos & TNR0set%in% setTNR0 & TNR1set%in% setTNR1 & TPRset %in% setTPRset)
+    filter(TNR0set%in% setTNR0 & TNR1set%in% setTNR1 & TPRset %in% setTPRset)
+  
   switch (statistic,
           median = {
             switch (view,
@@ -264,7 +271,7 @@ make_scatter_figure = function(name, var1="CV", var2="accuracy", algos=algos_ful
   if(grepl("sex", name)){
     name = gsub('sex', 'gender', name)
   }
-  print(dataFrame)
+  
   fig_title = paste(name, "(", statistic, ")", sep="")
   switch(display,
          off = ggplot(dataFrame, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
@@ -282,6 +289,80 @@ make_scatter_figure = function(name, var1="CV", var2="accuracy", algos=algos_ful
   )
 }
 
+```
+
+```{r box plot}
+create_sensitivity_summary = function(df, x_var, y_var, view) {
+  quo_x_var = enquo(x_var)
+  quo_y_var = enquo(y_var)
+  names(df)[names(df)==view]="choice"
+  
+  sensitivity_summary = 
+    df %>%
+    mutate(choice=recode(choice, "FairGPopp*, 1-TNR=0.6"="1-TNR=0.6"))%>%
+    mutate(choice=recode(choice, "FairGPopp*, 1-TNR=0.7"="1-TNR=0.7"))%>%
+    mutate(choice=recode(choice, "FairGPopp*, 1-TNR=0.8"="1-TNR=0.8"))%>%
+    mutate(choice=recode(choice, "FairGPopp*, 1-TNR=0.9"="1-TNR=0.9"))%>% 
+    group_by(choice) %>% 
+    summarise(x_sd=sd(!!quo_x_var), x_mean=mean(!!quo_x_var), 
+              y_sd=sd(!!quo_y_var), y_mean=mean(!!quo_y_var))
+  sensitivity_summary
+}
+
+basic_sensitivity_plot = function(sensitivity_summary, x_var, y_var, title) {
+  ggplot(sensitivity_summary, aes(x=x_mean, y=y_mean, colour=choice)) + catscale10 + catscale10_2 +
+    xlab(quo_name(enquo(x_var))) + ylab(quo_name(enquo(y_var))) + ggtitle(title)
+}
+
+plot_lines_sensitity_summary = function(basic_plot) {
+  basic_plot + 
+    geom_segment(aes(x=x_mean - x_sd, xend = x_mean + x_sd,
+                     y=y_mean, yend = y_mean,
+                     colour=choice)) + 
+    geom_segment(aes(x=x_mean, xend = x_mean,
+                     y=y_mean - y_sd, yend = y_mean + y_sd,
+                     colour=choice))
+}
+
+plot_ellipses_sensitity_summary = function(basic_plot) {
+  basic_plot + stat_ellipse(level=0.5, geom="polygon", 
+                            aes(fill=choice), alpha=0.2) + stat_ellipse(level=0.5, fill=NA)
+}
+
+plot_rects_sensitivity_summary = function(basic_plot) {
+  aesthetics1 = aes(xmin = x_mean - 0.5 * x_sd,   
+                    xmax = x_mean + 0.5 * x_sd,
+                    ymin = y_mean - 0.5 * y_sd, 
+                    ymax = y_mean + 0.5 * y_sd,
+                    fill=choice)
+  aesthetics2 = aes(xmin = x_mean - 0.5 * x_sd,   
+                    xmax = x_mean + 0.5 * x_sd,
+                    ymin = y_mean - 0.5 * y_sd, 
+                    ymax = y_mean + 0.5 * y_sd,
+                    colour=choice)
+  basic_plot + theme_bw() + geom_point(aes(x_mean, y_mean), size = 2) + 
+    geom_rect(aesthetics1, alpha=0.5, size=1.5) + 
+    geom_rect(aesthetics2, fill=NA)
+}
+
+plot_sensitivity = function(df, var1, var2, view, name) {
+  x_var = as.name(var1)
+  y_var = as.name(var2)
+  
+  sensitivity_summary = create_sensitivity_summary(df, !!x_var, !!y_var, view)
+  basic_plot = basic_sensitivity_plot(sensitivity_summary, !!x_var, !!y_var, name)
+  # Different types of plot 
+  plot_rects_sensitivity_summary(basic_plot)  
+  # plot_lines_sensitity_summary(basic_plot)
+  # plot_ellipses_sensitity_summary(basic_plot)
+  
+}
+
+make_sensitivity_figure = function(name, var1="DIbinary", var2="accuracy", algos_plot=algos_full, view="TNR1set") {
+  df = read.csv(str_c(name, "_numerical-binsensitive.csv"), check.names=FALSE) %>%
+    filter(algorithm %in% algos_plot)
+  plot_sensitivity(df, var1, var2, view, name)
+}
 ```
 
 ## Users setting
@@ -330,8 +411,8 @@ add_for_target = 0
 
 ```{r scatter plot for tnr0 =tnr1 = 1}
 view_from = c("TPRset")
-tnr0_use = c(paste("FairGPopp, 0-TNR=", 1, sep = ""),paste("FairGPopp*, 0-TNR=", 1, sep = ""))
-tnr1_use = c(paste("FairGPopp, 1-TNR=", 1, sep = ""),paste("FairGPopp*, 1-TNR=", 1, sep = ""))
+tnr0_use = c(paste("FairGPopp, 0-TNR=", 0.7, sep = ""),paste("FairGPopp*, 0-TNR=", 0.7, sep = ""))
+tnr1_use = c(paste("FairGPopp, 1-TNR=", 0.7, sep = ""),paste("FairGPopp*, 1-TNR=", 0.7, sep = ""))
 
 for (i in 1:N_file) {
   if(add_for_target){
@@ -351,7 +432,7 @@ for (i in 1:N_file) {
   print(q)
   
   export_name = paste(file_name[i], view_from,"_odd_DIacc.eps", sep="")
-  #ggsave(export_name, q)
+  ggsave(export_name, q)
 }
 
 ```
@@ -380,7 +461,7 @@ for (i in 1:N_file) {
   print(p)
   
   export_name = paste(file_name[i], view_from,"_odd_tpr.eps", sep="")
-  # ggsave(export_name, p)
+  ggsave(export_name, p)
 }
 
 ```
