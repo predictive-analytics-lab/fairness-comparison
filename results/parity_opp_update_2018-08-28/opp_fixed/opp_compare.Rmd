@@ -39,7 +39,8 @@ catscale20  = scale_colour_manual(values=colors_20)
 catscale20_2 = scale_fill_manual(values=colors_20)
 
 baseline_to_plot = c(
-  "GP", 
+  "GP",
+  #"GP*", 
   "SVM", 
   "ZafarEqOpp"
   # "GaussianNB", 
@@ -51,8 +52,17 @@ baseline_to_plot = c(
 )
 
 algos_to_plot = c(
-  "FairGPopp",
-  "FairGPopp*")
+  "FairGPopp, TPR=1.0",
+  "FairGPopp*, TPR=1.0",
+  "FairGPopp, TPR=0.9",
+  "FairGPopp*, TPR=0.9",
+  "FairGPopp, TPR=0.8",
+  "FairGPopp*, TPR=0.8",
+  "FairGPopp, TPR=0.7",
+  "FairGPopp*, TPR=0.7",
+  "FairGPopp, TPR=0.6",
+  "FairGPopp*, TPR=0.6"
+  )
 
 order = c(algos_to_plot, baseline_to_plot)
 
@@ -75,13 +85,17 @@ create_sensitivity_summary = function(df, x_var, y_var) {
 basic_sensitivity_plot = function(sensitivity_summary, x_var, y_var) {
   if(grepl("sex", quo_name(enquo(x_var)))){
     label_x = gsub('sex', 'gender', quo_name(enquo(x_var)))
-  } else {label_x = quo_name(enquo(x_var))}
+  } else {
+    label_x = quo_name(enquo(x_var))
+    }
   
   if(grepl("sex", quo_name(enquo(y_var)))){
     label_y = gsub('sex', 'gender', quo_name(enquo(y_var)))
-  } else {label_y = quo_name(enquo(y_var))}
+  } else {
+    label_y = quo_name(enquo(y_var))
+    }
   
-  ggplot(sensitivity_summary, aes(x=x_mean, y=y_mean, colour=algorithm)) + catscale10 + catscale10_2 +
+  ggplot(sensitivity_summary, aes(x=x_mean, y=y_mean, colour=algorithm)) + catscale20 + catscale20_2 +
     xlab(label_x) + ylab(label_y)
 }
 
@@ -113,6 +127,7 @@ plot_rects_sensitivity_summary = function(basic_plot) {
   basic_plot + theme_bw() + geom_point(aes(x_mean, y_mean), size = 2) + 
     geom_rect(aesthetics1, alpha=0.5, size=1.5) + 
     geom_rect(aesthetics2, fill=NA)
+
 }
 
 do_it_all = function(name, var1, var2, check.names=FALSE) {
@@ -156,8 +171,8 @@ show_mean_std = function(name, df, var1, var2){
   x_var = as.name(var1)
   y_var = as.name(var2)
   sensitivity_summary = create_sensitivity_summary(df, !!x_var, !!y_var)
-  filename = paste(name, "_mean_std.xlsx")
-  write.xlsx(sensitivity_summary, filename, sheetName=name)
+  filename = paste(name,"_", var1, "_", var2, "_mean_std.xlsx", sep = "")
+  # write.xlsx(sensitivity_summary, filename, sheetName=name)
 }
 
 make_sensitivity_figure = function(name, var1="DIbinary", var2="accuracy", 
@@ -172,16 +187,19 @@ make_sensitivity_figure = function(name, var1="DIbinary", var2="accuracy",
   df =  rbind(df_algo, df_baseline)
   df$algorithm = factor(df$algorithm, levels= order) 
   
+  df[["race-nTPRDiff"]] = (1 - df[["race-TPRDiff"]]) / df[["race-TPR"]]
+  df[["sex-nTPRDiff"]] = (1 - df[["sex-TPRDiff"]]) / df[["sex-TPR"]]
+  
   show_mean_std(name, df, var1, var2)
   
   if(grepl("sex", name)){
-    name = gsub('sex', 'gender', name)
-    plot_sensitivity(df, var1, var2)  + ggtitle(name) + xlim(0.75, 0.95)
+    # name = gsub('sex', 'gender', name)
+    namefile = "Propublica (Gender)"
+    plot_sensitivity(df, var1, var2)  + ggtitle(namefile) # + xlim(0.75, 0.95)
   }else{
-    plot_sensitivity(df, var1, var2)  + ggtitle(name) + xlim(1.05, 1.25)
+    namefile = "Propublica (Race)"
+    plot_sensitivity(df, var1, var2)  + ggtitle(namefile) # + xlim(1.05, 1.25)
   }
-  
-  
 }
 
 # dataset setting
@@ -192,6 +210,120 @@ N_file = length(file_name)
 ```
 
 ## Algorithm sensitivity variable_1 vs variable_2
+
+```{r}
+variable_1 = "nTPRDiff"
+add_for_1 = 1
+
+variable_2 = "accuracy"
+add_for_2 = 0
+
+for (i in 1:N_file) {
+  # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="")
+  if(add_for_1){
+    var1_name = paste(file_attribute[i], "-", variable_1, sep="")
+  } else {
+    var1_name = variable_1
+  }
+  if(add_for_2){
+    var2_name = paste(file_attribute[i], "-", variable_2, sep="")
+  } else {
+    var2_name = variable_2
+  }
+  p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
+  print(p)
+  export_name = paste(file_name[i], "_opp_box.eps", sep="")
+  ggsave(export_name, p)
+}
+
+```
+
+## Algorithm sensitivity TPR vs TNR
+
+```{r}
+variable_1 = "TPR"
+add_for_1 = 0
+
+variable_2 = "TNR"
+add_for_2 = 0
+
+for (i in 1:N_file) {
+  # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="")
+  if(add_for_1){
+    var1_name = paste(file_attribute[i], "-", variable_1, sep="")
+  } else {
+    var1_name = variable_1
+  }
+  if(add_for_2){
+    var2_name = paste(file_attribute[i], "-", variable_2, sep="")
+  } else {
+    var2_name = variable_2
+  }
+  p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
+  print(p)
+  export_name = paste(file_name[i], "_opp_box_tpr_tnr.eps", sep="")
+  ggsave(export_name, p)
+}
+
+```
+
+## Algorithm sensitivity 0-TNR vs 1-TNR
+
+```{r}
+variable_1 = "0-TNR"
+add_for_1 = 1
+
+variable_2 = "1-TNR"
+add_for_2 = 1
+
+for (i in 1:N_file) {
+  # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="")
+  if(add_for_1){
+    var1_name = paste(variable_1, "-", file_attribute[i], sep="")
+  } else {
+    var1_name = variable_1
+  }
+  if(add_for_2){
+    var2_name = paste(variable_2, "-", file_attribute[i], sep="")
+  } else {
+    var2_name = variable_2
+  }
+  p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
+  print(p)
+  export_name = paste(file_name[i], "_opp_box_0tnr_1tnr.eps", sep="")
+  ggsave(export_name, p)
+}
+
+```
+
+## Algorithm sensitivity 0-TPR vs 1-TPR
+
+```{r}
+variable_1 = "0-TPR"
+add_for_1 = 1
+
+variable_2 = "1-TPR"
+add_for_2 = 1
+
+for (i in 1:N_file) {
+  # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="")
+  if(add_for_1){
+    var1_name = paste(variable_1, "-", file_attribute[i], sep="")
+  } else {
+    var1_name = variable_1
+  }
+  if(add_for_2){
+    var2_name = paste(variable_2, "-", file_attribute[i], sep="")
+  } else {
+    var2_name = variable_2
+  }
+  p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
+  print(p)
+  export_name = paste(file_name[i], "_opp_box_0tpr_1tpr.eps", sep="")
+  ggsave(export_name, p)
+}
+
+```
 
 ```{r}
 variable_1 = "TPRDiff"

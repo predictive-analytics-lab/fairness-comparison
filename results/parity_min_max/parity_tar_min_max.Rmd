@@ -55,13 +55,21 @@ create_sensitivity_summary = function(df, x_var, y_var) {
   sensitivity_summary
 }
 
-basic_sensitivity_plot = function(sensitivity_summary, x_var, y_var, title) {
+basic_sensitivity_plot = function(sensitivity_summary, x_var, y_var) {
+  if(grepl("sex", quo_name(enquo(x_var)))){
+    label_x = gsub('sex', 'gender', quo_name(enquo(x_var)))
+  } else {
+    label_x = quo_name(enquo(x_var))
+  }
+  
+  if(grepl("sex", quo_name(enquo(y_var)))){
+    label_y = gsub('sex', 'gender', quo_name(enquo(y_var)))
+  } else {
+    label_y = quo_name(enquo(y_var))
+  }
+  
   ggplot(sensitivity_summary, aes(x=x_mean, y=y_mean, colour=algorithm)) + catscale10 + catscale10_2 +
-    xlab(quo_name(enquo(x_var))) + ylab(quo_name(enquo(y_var))) + 
-    theme_bw() + theme(legend.position=c(0.1,0.2), legend.justification=c(0.1,0.2), 
-                       legend.text=element_text(size=18), legend.title = element_blank(),
-                       axis.text=element_text(size=20),axis.title=element_text(size=20,face="bold"),
-                       plot.title = element_text(size=17, face = "bold")) + ggtitle(title)
+    xlab(quo_name(enquo(x_var))) + ylab(quo_name(enquo(y_var))) 
 }
 
 plot_lines_sensitity_summary = function(basic_plot) {
@@ -90,8 +98,12 @@ plot_rects_sensitivity_summary = function(basic_plot) {
                     ymin = y_mean - 0.5 * y_sd, 
                     ymax = y_mean + 0.5 * y_sd,
                     colour=algorithm)
-  basic_plot +
-    geom_rect(aesthetics1, alpha=0.15) +
+  basic_plot + theme_bw() + theme(legend.position=c(0.1,0.2), legend.justification=c(0.1,0.2),
+                       legend.text=element_text(size=25), legend.title = element_blank(),
+                       axis.text=element_text(size=25),axis.title=element_text(size=25),
+                       plot.title = element_text(size=25)) + 
+    geom_point(aes(x_mean, y_mean), size = 2) +
+    geom_rect(aesthetics1, alpha=0.5, size=1.5) + 
     geom_rect(aesthetics2, fill=NA)
 }
 
@@ -132,18 +144,18 @@ plot_sensitivity = function(df, var1, var2, name) {
   y_var = as.name(var2)
   
   sensitivity_summary = create_sensitivity_summary(df, !!x_var, !!y_var)
-  basic_plot = basic_sensitivity_plot(sensitivity_summary, !!x_var, !!y_var, name)
+  basic_plot = basic_sensitivity_plot(sensitivity_summary, !!x_var, !!y_var)
   plot_rects_sensitivity_summary(basic_plot)
 }
 
 make_sensitivity_figure = function(name, var1="DIbinary", var2="accuracy", algos_plot=algos_to_plot) {
   df = read.csv(str_c(name, "_numerical-binsensitive.csv"), check.names=FALSE) %>%
     filter(algorithm %in% algos_plot) %>%
-    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_max"="Max Target"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_max"="max"))%>%
     mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.75"="FairGPparity*, b=0.75"))%>%
-    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True"="Average Target"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True"="average"))%>%
     mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.25"="FairGPparity*, b=0.25"))%>%
-    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_min"="Min Target"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_min"="min"))%>%
     mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_1.0"="FairGPparity, max target"))%>%
     mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.75"="FairGPparity, b=0.75"))%>%
     mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.5"="FairGPparity, mean target"))%>%
@@ -151,7 +163,15 @@ make_sensitivity_figure = function(name, var1="DIbinary", var2="accuracy", algos
     mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.0"="FairGPparity, min target"))
   
   # df$algorithm = factor(df$algorithm, levels= order) 
-  plot_sensitivity(df, var1, var2, name)
+  # plot_sensitivity(df, var1, var2, name)
+  if(grepl("sex", name)){
+    # name = gsub('sex', 'gender', name)
+    namefile = "Adult (Gender)"
+    plot_sensitivity(df, var1, var2)  + ggtitle(namefile) # + xlim(0.75, 0.95)
+  }else{
+    namefile = "Adult (Race)"
+    plot_sensitivity(df, var1, var2)  + ggtitle(namefile) # + xlim(1.05, 1.25)
+  }
 }
 
 # dataset setting
