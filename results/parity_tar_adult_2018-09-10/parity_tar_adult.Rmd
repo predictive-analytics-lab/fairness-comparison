@@ -103,13 +103,16 @@ make_scatter_figure = function(name, var1="race-TPRDiff", var2="accuracy", algos
   }
   if(grepl("sex", name)){
     name = gsub('sex', 'gender', name)
+    fig_title = "Adult (Gender)"
+  }else{
+    fig_title = "Adult (Race)"
   }
   
-  fig_title = paste(name, "(", statistic, ")", sep="")
+  
   switch(display,
          off = ggplot(dataFrame, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
            geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) + theme_bw() + 
-           labs(y=var2, x=var1, title=name),
+           labs(y=var2, x=var1, title=fig_title),
          title = ggplot(dataFrame, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
            geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) + theme_bw() + 
            labs(y=var2, x=var1, title=fig_title),
