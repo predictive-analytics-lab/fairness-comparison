@@ -22,6 +22,7 @@ from __future__ import unicode_literals
 
 import logging
 import numpy as np
+import sys
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 # private modules -------------------------------------------------------------
@@ -51,10 +52,10 @@ class CaldersVerwerTwoNaiveBayes(BaseEstimator,
                                  BayesianClassifierMixin,
                                  ClassifierMixin):
     """ Calders and Verwer's two naive Bayes method
-    
+
     A single and binary sensitive feature is assumed.
     The number of classes must be two.
-    
+
     Parameters
     ----------
     n_features : int
@@ -103,7 +104,7 @@ class CaldersVerwerTwoNaiveBayes(BaseEstimator,
                                                self.alpha,
                                                self.beta)
 
-    def fit(self, X, y, ns=1, delta=0.01):
+    def fit(self, X, y, ns=1, delta=0.1):
         """ train this model
 
         Parameters
@@ -153,8 +154,8 @@ class CaldersVerwerTwoNaiveBayes(BaseEstimator,
                     self.pys_[1, 1] += delta * self.pys_[1, 0]
                     pos_flag = False
             numpos, disc = self._get_stats(X, y)
-#            print >> sys.stderr, "numpos, disc =", numpos, disc
-#            print >> sys.stderr, "pys_ =", self.pys_[0, :], self.pys_[1, :]
+            print(sys.stderr, "numpos, disc =", numpos, disc)
+            print(sys.stderr, "pys_ =", self.pys_[0, :], self.pys_[1, :])
 
     def _get_stats(self, X, y):
         """ get statistics

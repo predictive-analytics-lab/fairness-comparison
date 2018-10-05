@@ -1,3 +1,4 @@
+from sklearn.metrics import accuracy_score
 from algorithms.Algorithm import Algorithm
 
 class Generic(Algorithm):
@@ -16,6 +17,8 @@ class Generic(Algorithm):
         y = train_df_nosensitive[class_attr]
         X = train_df_nosensitive.drop(columns = class_attr)
         classifier.fit(X, y)
+        train_predict = classifier.predict(X)
+        print(f"accuracy on training set: {accuracy_score(y, train_predict)}")
 
         # get the predictions on the test set
         X_test = test_df_nosensitive.drop(class_attr, axis=1)

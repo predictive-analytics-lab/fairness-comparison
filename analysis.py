@@ -11,7 +11,8 @@ from data.objects.list import DATASETS, get_dataset_names
 from data.objects.ProcessedData import TAGS
 
 # The graphs to generate: (xaxis measure, yaxis measure)
-GRAPHS = [('DIbinary', 'accuracy'), ('sex-TPR', 'sex-calibration-')]
+GRAPHS = [('DIbinary', 'accuracy'), ('sex-TPR', 'accuracy'),
+          ('race-TPR', 'accuracy'), ('age-TPR', 'accuracy')]
 
 
 def run(rfigures=True, dataset=get_dataset_names(), graphs=GRAPHS):

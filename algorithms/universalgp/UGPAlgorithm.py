@@ -9,7 +9,8 @@ import numpy as np
 from ..Algorithm import Algorithm
 
 # TODO: find a better way to specify the path
-UGP_PATH = "/home/ubuntu/code/UniversalGP/gaussian_process.py"
+UGP_PATH = "/Users/zc223/PycharmProjects/UniversalGP/gaussian_process.py"
+
 USE_EAGER = False
 MAX_TRAIN_STEPS = 10000
 MAX_BATCH_SIZE = 10000
@@ -440,7 +441,7 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train):
         iso=False,
         num_samples_pred=2000,
         s_as_input=s_as_input,
-        num_inducing=MAX_NUM_INDUCING,
+        num_inducing=250   #MAX_NUM_INDUCING,
     ), **parameters}
 
 
