@@ -16,7 +16,7 @@ DataEntry = namedtuple('DataEntry', ['label', 'values', 'do_fill'])
 PlotDef = namedtuple('PlotDef', ['title', 'entries'])
 
 
-def common_plotting_settings(plot, plot_def, xaxis_title, yaxis_title, legend_outside):
+def common_plotting_settings(plot, plot_def, xaxis_title, yaxis_title, legend="inside"):
     """Common settings for plots
 
     Args:
@@ -30,13 +30,14 @@ def common_plotting_settings(plot, plot_def, xaxis_title, yaxis_title, legend_ou
     plot.set_ylabel(yaxis_title)
     plot.set_title(plot_def.title)
     plot.grid()
-    if legend_outside:
+    if legend == "outside":
         legend = plot.legend(loc='upper left', bbox_to_anchor=(1, 1))
         return legend
-    plot.legend()
+    elif legend == "inside":
+        plot.legend()
 
 
-def scatter(plot, plot_def, xaxis, yaxis, legend_outside=False):
+def scatter(plot, plot_def, xaxis, yaxis, legend="inside"):
     """Generate a scatter plot
 
     Args:
@@ -61,10 +62,10 @@ def scatter(plot, plot_def, xaxis, yaxis, legend_outside=False):
             entry.values[xaxis_measure], entry.values[yaxis_measure], shapes[shp_index],
             label=entry.label, **additional_params  # , c=colors[i]
         )
-    return common_plotting_settings(plot, plot_def, xaxis[1], yaxis[1], legend_outside)
+    return common_plotting_settings(plot, plot_def, xaxis[1], yaxis[1], legend)
 
 
-def errorbox(plot, plot_def, xaxis, yaxis, legend_outside=False):
+def errorbox(plot, plot_def, xaxis, yaxis, legend="inside"):
     """Generate a figure with errorboxes that reflect the std dev of an entry
 
     Args:
@@ -93,10 +94,10 @@ def errorbox(plot, plot_def, xaxis, yaxis, legend_outside=False):
         plot.bar(xmean, ystd, bottom=ymean - 0.5 * ystd, width=xstd, align='center', color='none',
                  edgecolor=colors10[i], label=entry.label, linewidth=3, zorder=1000.)
         plot.plot(xmean, ymean, 'ko')
-    return common_plotting_settings(plot, plot_def, xaxis[1], yaxis[1], legend_outside)
+    return common_plotting_settings(plot, plot_def, xaxis[1], yaxis[1], legend)
 
 
-def plot_all(plot_func, plot_def_list, xaxis, yaxis, save=False, legend_outside=False,
+def plot_all(plot_func, plot_def_list, xaxis, yaxis, save=False, legend="inside",
              figsize=(20, 6), dpi=None):
     """Plot all plot definitions in a given list. The plots will be in a single row.
 
@@ -120,7 +121,7 @@ def plot_all(plot_func, plot_def_list, xaxis, yaxis, save=False, legend_outside=
     fig, plots = plt.subplots(ncols=len(plot_def_list), squeeze=False, figsize=figsize)
     legends = []
     for plot, plot_def in zip(plots[0], plot_def_list):
-        legend = plot_func(plot, plot_def, xaxis, yaxis, legend_outside)
+        legend = plot_func(plot, plot_def, xaxis, yaxis, legend)
         if legend is not None:
             legends.append(legend)
     if not save:
@@ -128,7 +129,7 @@ def plot_all(plot_func, plot_def_list, xaxis, yaxis, save=False, legend_outside=
     save_path = Path("results") / Path("analysis") / Path(plot_def_list[0].title)
     save_path.mkdir(parents=True, exist_ok=True)
     figure_path = str(save_path / Path(f"{xaxis[0]}-{yaxis[0]}.png"))
-    if legend_outside:
+    if legend == "outside":
         fig.savefig(figure_path, dpi=dpi, bbox_extra_artists=legends, bbox_inches='tight')
     else:
         fig.savefig(figure_path, dpi=dpi)
