@@ -201,7 +201,56 @@ make_sensitivity_figure = function(name, var1="DIbinary", var2="accuracy",
     plot_sensitivity(df, var1, var2)  + ggtitle(namefile) # + xlim(1.05, 1.25)
   }
 }
+```
 
+```{r Scatter plot}
+make_scatter_figure = function(name, var1="race-TPRDiff", var2="accuracy", algos=algos_to_plot, display="off") {
+  x_var = as.name(var1)
+  y_var = as.name(var2)
+  
+  df = read.csv(str_c(name, "_numerical-binsensitive.csv"), check.names=FALSE) %>%
+    filter(algorithm %in% algos)
+  
+  # Scatterplot
+  color_used = catscale10
+  color_used_2 = catscale10_2
+  target_view = as.name("algorithm")
+  
+  if(grepl("sex", var1)){
+    var1 = gsub('sex', 'gender', var1)
+  }
+  if(grepl("sex", var2)){
+    var2 = gsub('sex', 'gender', var2)
+  }
+  if(grepl("sex", name)){
+    name = gsub('sex', 'gender', name)
+    fig_title = "Propublica (Gender)"
+  }else{
+    fig_title = "Propublica (Race)"
+  }
+  
+  switch(display,
+         off = ggplot(df, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
+           geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) + theme_bw() + 
+           labs(y=var2, x=var1, title=fig_title),
+         title = ggplot(df, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
+           geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) + theme_bw() + 
+           labs(y=var2, x=var1, title=fig_title),
+         captain = ggplot(df, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
+           geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) + theme_bw() + 
+           labs(y=var2, x=var1, caption = str_c(name, "_numerical-binsensitive.csv")),
+         all = ggplot(df, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
+           geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) + theme_bw() + 
+           labs(y=var2, x=var1, title=fig_title)
+  )
+}
+
+
+```
+
+
+
+```{r setting}
 # dataset setting
 file_name = c("propublica-recidivism_race", "propublica-recidivism_sex")
 file_attribute = c("race", "sex")
@@ -233,7 +282,7 @@ for (i in 1:N_file) {
   p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
   print(p)
   export_name = paste(file_name[i], "_opp_box.eps", sep="")
-  ggsave(export_name, p)
+  #ggsave(export_name, p)
 }
 
 ```
@@ -259,7 +308,8 @@ for (i in 1:N_file) {
   } else {
     var2_name = variable_2
   }
-  p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
+  # p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
+  p = make_scatter_figure(file_name[i], var1 = var1_name, var2 = var2_name)
   print(p)
   export_name = paste(file_name[i], "_opp_box_tpr_tnr.eps", sep="")
   ggsave(export_name, p)
@@ -288,10 +338,11 @@ for (i in 1:N_file) {
   } else {
     var2_name = variable_2
   }
-  p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
+  # p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
+  p = make_scatter_figure(file_name[i], var1 = var1_name, var2 = var2_name)
   print(p)
   export_name = paste(file_name[i], "_opp_box_0tnr_1tnr.eps", sep="")
-  ggsave(export_name, p)
+  #ggsave(export_name, p)
 }
 
 ```
@@ -317,7 +368,8 @@ for (i in 1:N_file) {
   } else {
     var2_name = variable_2
   }
-  p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
+  # p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
+  p = make_scatter_figure(file_name[i], var1 = var1_name, var2 = var2_name)
   print(p)
   export_name = paste(file_name[i], "_opp_box_0tpr_1tpr.eps", sep="")
   ggsave(export_name, p)
@@ -344,10 +396,11 @@ for (i in 1:N_file) {
   } else {
     var2_name = variable_2
   }
-  p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
+  # p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
+  p = make_scatter_figure(file_name[i], var1 = var1_name, var2 = var2_name)
   print(p)
   export_name = paste(file_name[i], "_opp_box.eps", sep="")
-  ggsave(export_name, p)
+  # ggsave(export_name, p)
 }
 
 ```
