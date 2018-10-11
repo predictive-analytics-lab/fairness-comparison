@@ -24,12 +24,13 @@ def common_plotting_settings(plot, plot_def, xaxis_title, yaxis_title, legend="i
         plot_def: a `PlotDef` that defines properties of the plot
         xaxis_title: label for x-axis
         yaxis_title: label for y-axis
-        legend_outside: True if the legend should be outside of the plots
+        legend: where to put the legend; allowed values: None, "inside", "outside"
     """
     plot.set_xlabel(xaxis_title)
     plot.set_ylabel(yaxis_title)
-    plot.set_title(plot_def.title)
-    plot.grid()
+    if plot_def.title:
+        plot.set_title(plot_def.title)
+    plot.grid(True)
     if legend == "outside":
         legend = plot.legend(loc='upper left', bbox_to_anchor=(1, 1))
         return legend
@@ -37,7 +38,7 @@ def common_plotting_settings(plot, plot_def, xaxis_title, yaxis_title, legend="i
         plot.legend()
 
 
-def scatter(plot, plot_def, xaxis, yaxis, legend="inside"):
+def scatter(plot, plot_def, xaxis, yaxis, legend="inside", startindex=0):
     """Generate a scatter plot
 
     Args:
@@ -45,11 +46,13 @@ def scatter(plot, plot_def, xaxis, yaxis, legend="inside"):
         plot_def: a `PlotDef` that defines properties of the plot
         xaxis: either a string or a tuple of two strings
         yaxis: either a string or a tuple of two strings
-        legend_outside: True if the legend should be outside of the plots
+        legend: where to put the legend; allowed values: None, "inside", "outside"
     """
-    shapes = ['o', 'D', 's', '*', '^', 'v', '<', '>', 'p', 'X', 'P']
+    shapes = ['o', 'X', 'D', 's', '^', 'v', '<', '>', '*', 'p', 'P']
+    colors10 = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2",
+                "#7f7f7f", "#bcbd22", "#17becf"]
     xaxis_measure, yaxis_measure = xaxis[0], yaxis[0]
-    filled_counter = 0
+    filled_counter = startindex
     for i, entry in enumerate(plot_def.entries):
         if entry.do_fill:
             additional_params = dict()
@@ -57,15 +60,15 @@ def scatter(plot, plot_def, xaxis, yaxis, legend="inside"):
             filled_counter += 1
         else:
             additional_params = dict(mfc='none')
-            shp_index = i - filled_counter
+            shp_index = i + startindex - filled_counter
         plot.plot(
             entry.values[xaxis_measure], entry.values[yaxis_measure], shapes[shp_index],
-            label=entry.label, **additional_params  # , c=colors[i]
+            label=entry.label, **additional_params, c=colors10[shp_index]
         )
     return common_plotting_settings(plot, plot_def, xaxis[1], yaxis[1], legend)
 
 
-def errorbox(plot, plot_def, xaxis, yaxis, legend="inside"):
+def errorbox(plot, plot_def, xaxis, yaxis, legend="inside", firstcolor=0, firstshape=0):
     """Generate a figure with errorboxes that reflect the std dev of an entry
 
     Args:
@@ -73,7 +76,7 @@ def errorbox(plot, plot_def, xaxis, yaxis, legend="inside"):
         plot_def: a `PlotDef` that defines properties of the plot
         xaxis: either a string or a tuple of two strings
         yaxis: either a string or a tuple of two strings
-        legend_outside: True if the legend should be outside of the plots
+        legend: where to put the legend; allowed values: None, "inside", "outside"
     """
     # scale = scale_color_brewer(type='qual', palette=1)
     # d3.schemeCategory20
@@ -81,24 +84,31 @@ def errorbox(plot, plot_def, xaxis, yaxis, legend="inside"):
     #  "#9467bd", "#c5b0d5", "#8c564b", "#c49c94", "#e377c2", "#f7b6d2", "#7f7f7f", "#c7c7c7",
     #  "#bcbd22", "#dbdb8d", "#17becf", "#9edae5"]
 
-    # colors20 = ["#1f77b4", "#aec7e8", "#ff7f0e", "#ffbb78", "#2ca02c", "#98df8a", "#d62728",
-    #             "#ff9896", "#9467bd", "#c5b0d5", "#8c564b", "#c49c94", "#e377c2", "#f7b6d2",
-    #             "#7f7f7f", "#c7c7c7", "#bcbd22", "#dbdb8d", "#17becf", "#9edae5"]
-    colors10 = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2",
-                "#7f7f7f", "#bcbd22", "#17becf"]
+    colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2",
+              "#7f7f7f", "#bcbd22", "#17becf"]
+    pale_colors = ["#aec7e8", "#ffbb78", "#98df8a", "#ff9896", "#c5b0d5", "#c49c94", "#f7b6d2",
+                   "#c7c7c7", "#dbdb8d", "#9edae5"]
+    shapes = ['o', 'X', 'D', 's', '^', 'v', '<', '>', '*', 'p', 'P']
 
     xaxis_measure, yaxis_measure = xaxis[0], yaxis[0]
+    filled_counter = firstcolor
     for i, entry in enumerate(plot_def.entries):
+        if entry.do_fill:
+            color = colors[filled_counter]
+            filled_counter += 1
+        else:
+            color = pale_colors[i + firstcolor - filled_counter]
+        i_shp = firstshape + i
         xmean, xstd = np.mean(entry.values[xaxis_measure]), np.std(entry.values[xaxis_measure])
         ymean, ystd = np.mean(entry.values[yaxis_measure]), np.std(entry.values[yaxis_measure])
         plot.bar(xmean, ystd, bottom=ymean - 0.5 * ystd, width=xstd, align='center', color='none',
-                 edgecolor=colors10[i], label=entry.label, linewidth=3, zorder=1000.)
-        plot.plot(xmean, ymean, 'ko')
+                 edgecolor=color, linewidth=3, zorder=3 + 2 * i_shp)
+        plot.plot(xmean, ymean, shapes[i_shp], c=color, label=entry.label, zorder=4 + 2 * i_shp)
     return common_plotting_settings(plot, plot_def, xaxis[1], yaxis[1], legend)
 
 
-def plot_all(plot_func, plot_def_list, xaxis, yaxis, save=False, legend="inside",
-             figsize=(20, 6), dpi=None):
+def plot_all(plot_func, plot_def_list, xaxis, yaxis, save=False, legend="inside", figsize=(20, 6),
+             dpi=None):
     """Plot all plot definitions in a given list. The plots will be in a single row.
 
     Args:
@@ -107,7 +117,7 @@ def plot_all(plot_func, plot_def_list, xaxis, yaxis, save=False, legend="inside"
         xaxis: either a string or a tuple of two strings
         yaxis: either a string or a tuple of two strings
         save: True if the figure should be saved to disk
-        legend_outside: True if the legend should be outside of the plots
+        legend: where to put the legend; allowed values: None, "inside", "outside"
         figsize: size of the whole figure
         dpi: DPI of the figure
     Returns:
@@ -289,15 +299,15 @@ def merge_same_labels(plot_defs):
     return new_plot_defs
 
 
-def reorder_entries(plot_defs, new_order):
-    """Reorder the entries in the plot definitions
+def choose_entries(plot_defs, new_order):
+    """Choose the entries in the plot definitions
 
     Args:
         plot_defs: list of plot definitions
         new_order: list of indices that define the new order of the entries. Indices may appear
                    multiple times and may appear not at all.
     Returns:
-        list of plot definitions with reordered entries
+        list of plot definitions with only the chosen entries in the given order
     """
     new_plot_defs = []
     for plot_def in plot_defs:
