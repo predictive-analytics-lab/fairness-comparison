@@ -38,7 +38,7 @@ def common_plotting_settings(plot, plot_def, xaxis_title, yaxis_title, legend="i
         plot.legend()
 
 
-def scatter(plot, plot_def, xaxis, yaxis, legend="inside", startindex=0):
+def scatter(plot, plot_def, xaxis, yaxis, legend="inside", startindex=0, markersize=6):
     """Generate a scatter plot
 
     Args:
@@ -63,12 +63,13 @@ def scatter(plot, plot_def, xaxis, yaxis, legend="inside", startindex=0):
             shp_index = i + startindex - filled_counter
         plot.plot(
             entry.values[xaxis_measure], entry.values[yaxis_measure], shapes[shp_index],
-            label=entry.label, **additional_params, c=colors10[shp_index]
+            label=entry.label, **additional_params, c=colors10[shp_index], markersize=markersize
         )
     return common_plotting_settings(plot, plot_def, xaxis[1], yaxis[1], legend)
 
 
-def errorbox(plot, plot_def, xaxis, yaxis, legend="inside", firstcolor=0, firstshape=0):
+def errorbox(plot, plot_def, xaxis, yaxis, legend="inside", firstcolor=0, firstshape=0,
+             markersize=6):
     """Generate a figure with errorboxes that reflect the std dev of an entry
 
     Args:
@@ -103,7 +104,8 @@ def errorbox(plot, plot_def, xaxis, yaxis, legend="inside", firstcolor=0, firsts
         ymean, ystd = np.mean(entry.values[yaxis_measure]), np.std(entry.values[yaxis_measure])
         plot.bar(xmean, ystd, bottom=ymean - 0.5 * ystd, width=xstd, align='center', color='none',
                  edgecolor=color, linewidth=3, zorder=3 + 2 * i_shp)
-        plot.plot(xmean, ymean, shapes[i_shp], c=color, label=entry.label, zorder=4 + 2 * i_shp)
+        plot.plot(xmean, ymean, shapes[i_shp], c=color, label=entry.label, zorder=4 + 2 * i_shp,
+                  markersize=markersize)
     return common_plotting_settings(plot, plot_def, xaxis[1], yaxis[1], legend)
 
 
