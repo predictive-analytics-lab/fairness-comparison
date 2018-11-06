@@ -98,10 +98,13 @@ plot_rects_sensitivity_summary = function(basic_plot) {
                     ymin = y_mean - 0.5 * y_sd, 
                     ymax = y_mean + 0.5 * y_sd,
                     colour=algorithm)
-  basic_plot + theme_bw() + theme(legend.position=c(0.1,0.2), legend.justification=c(0.1,0.2),
-                       legend.text=element_text(size=25), legend.title = element_blank(),
-                       axis.text=element_text(size=25),axis.title=element_text(size=25),
-                       plot.title = element_text(size=25)) + 
+  basic_plot + theme_bw() + theme(
+    # legend.position=c(0.1,0.2), legend.justification=c(0.1,0.2),
+    # legend.text=element_text(size=25), legend.title = element_blank(),
+    # axis.text=element_text(size=25),axis.title=element_text(size=25),
+    legend.text=element_text(size=25), legend.title = element_blank(),
+    axis.text=element_text(size=25),axis.title=element_text(size=25),
+    plot.title = element_text(size=25)) + 
     geom_point(aes(x_mean, y_mean), size = 2) +
     geom_rect(aesthetics1, alpha=0.5, size=1.5) + 
     geom_rect(aesthetics2, fill=NA)
@@ -189,23 +192,51 @@ add_for_1 = 0
 target = "accuracy"
 add_for_target = 0
 
-for (i in 1:N_file) {
-  if(add_for_target){
-    target_name = paste(file_attribute[i], "-", target, sep="")
-  } else {
-    target_name = target
-  }
-  if(add_for_1){
-    var1_name = paste(file_attribute[i], "-", variable_1, sep="")
-  } else {
-    var1_name = variable_1
-  }
-  q_1 = make_sensitivity_figure(file_name[i], var1=var1_name, var2=target_name)
-  print(q_1 )
-  export_name = paste(file_name[i], "_tar_choice.eps", sep="")
-  ggsave(export_name, q_1)
-  
+# for (i in 1:N_file) {
+#   if(add_for_target){
+#     target_name = paste(file_attribute[i], "-", target, sep="")
+#   } else {
+#     target_name = target
+#   }
+#   if(add_for_1){
+#     var1_name = paste(file_attribute[i], "-", variable_1, sep="")
+#   } else {
+#     var1_name = variable_1
+#   }
+#   q_1 = make_sensitivity_figure(file_name[i], var1=var1_name, var2=target_name)
+#   print(q_1 )
+#   export_name = paste(file_name[i], "_tar_choice.eps", sep="")
+#   # ggsave(export_name, q_1)
+# }
+
+if(add_for_target){
+  target_name1 = paste(file_attribute[1], "-", target, sep="")
+} else {
+  target_name1 = target
 }
+if(add_for_1){
+  var1_name1 = paste(file_attribute[1], "-", variable_1, sep="")
+} else {
+  var1_name1 = variable_1
+}
+q_1 = make_sensitivity_figure(file_name[1], var1=var1_name1, var2=target_name1)
+
+if(add_for_target){
+  target_name2 = paste(file_attribute[2], "-", target, sep="")
+} else {
+  target_name2 = target
+}
+if(add_for_1){
+  var1_name2 = paste(file_attribute[2], "-", variable_1, sep="")
+} else {
+  var1_name2 = variable_1
+}
+q_2 = make_sensitivity_figure(file_name[2], var1=var1_name2, var2=target_name2)
+
+q = ggarrange(q_1, q_2, ncol=2, nrow=1, common.legend = TRUE, legend="right", align = "hv", labels = c("(a)", "(b)"), font.label = list(size = 25, face = "bold"))
+print(q)
+export_name = paste("adult_tar_choice.eps", sep="")
+ggsave(export_name, q, width = 12, height = 4)
 
 ```
 

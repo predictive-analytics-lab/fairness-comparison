@@ -111,8 +111,13 @@ make_scatter_figure = function(name, var1="race-TPRDiff", var2="accuracy", algos
   
   switch(display,
          off = ggplot(dataFrame, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
-           geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) + theme_bw() + 
-           labs(y=var2, x=var1, title=fig_title),
+           geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) + theme_bw() + theme(
+             # legend.position=c(0.1,0.2), legend.justification=c(0.1,0.2),
+             # legend.text=element_text(size=25), legend.title = element_blank(),
+             # axis.text=element_text(size=25),axis.title=element_text(size=25),
+             legend.text=element_text(size=13), legend.title = element_blank(),
+             axis.text=element_text(size=15),axis.title=element_text(size=15),
+             plot.title = element_text(size=15)) + labs(y=var2, x=var1, title=fig_title),
          title = ggplot(dataFrame, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
            geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) + theme_bw() + 
            labs(y=var2, x=var1, title=fig_title),
@@ -165,7 +170,7 @@ for (i in 1:N_file) {
   q = make_scatter_figure(file_name[i], var1=var1_name, var2=target_name)
   print(q)
   export_name = paste(file_name[i], "_tar.eps", sep="")
-  ggsave(export_name, q)
+  #ggsave(export_name, q)
 }
 
 ```
@@ -189,8 +194,57 @@ for (i in 1:N_file) {
   p = make_scatter_figure(file_name[i], var1=var1_name, var2=var2_name)
   print(p)
   export_name = paste(file_name[i], "_PR.eps", sep="")
-  ggsave(export_name, p)
+  #ggsave(export_name, p)
 }
+```
+
+## Comparison four in one
+
+```{r}
+
+variable_1 = "DIbinary"
+add_for_1 = 0
+variable_2 = "accuracy"
+add_for_2 = 0
+if(add_for_1){
+  var1_name1 = paste(file_attribute[1], "-", variable_1, sep="")
+  var1_name2 = paste(file_attribute[2], "-", variable_1, sep="")
+} else {
+  var1_name1 = variable_1
+  var1_name2 = variable_1
+}
+if(add_for_2){
+  var2_name1 = paste(file_attribute[1], "-", variable_2, sep="")
+  var2_name2 = paste(file_attribute[2], "-", variable_2, sep="")
+} else {
+  var2_name1 = variable_2
+  var2_name2 = variable_2
+}
+p1 = make_scatter_figure(file_name[1], var1 = var1_name1, var2 = var2_name1)
+p2 = make_scatter_figure(file_name[2], var1 = var1_name2, var2 = var2_name2)
+
+
+
+variable_1 = "0-PR"
+variable_2 = "1-PR"
+
+var1_name1 = paste(variable_1, "-", file_attribute[1], sep="")
+var1_name2 = paste(variable_1, "-", file_attribute[2], sep="")
+
+var2_name1 = paste(variable_2, "-", file_attribute[1], sep="")
+var2_name2 = paste(variable_2, "-", file_attribute[2], sep="")
+
+
+p3 = make_scatter_figure(file_name[1], var1=var1_name1, var2=var2_name1)
+p4 = make_scatter_figure(file_name[2], var1=var1_name2, var2=var2_name2)
+
+export_name = paste(file_name[i], "_PR.eps", sep="")
+ggsave(export_name, p)
+
+q = ggarrange(p1, p2, p3, p4, ncol=4, nrow=1, common.legend = TRUE, legend="right", align = "hv", labels = c("(a)", "(b)", "(c)", "(d)"))
+print(q)
+export_name = paste("adult_parity_scatter.eps", sep="")
+ggsave(export_name, q, width = 42, height = 9, units = "cm")
 ```
 
 ## box plot
@@ -252,7 +306,14 @@ plot_rects_sensitivity_summary = function(basic_plot) {
                     ymin = y_mean - 0.5 * y_sd, 
                     ymax = y_mean + 0.5 * y_sd,
                     colour=algorithm)
-  basic_plot + theme_bw() + geom_point(aes(x_mean, y_mean), size = 2) + 
+  basic_plot + theme_bw() + theme(
+    # legend.position=c(0.1,0.2), legend.justification=c(0.1,0.2),
+    # legend.text=element_text(size=25), legend.title = element_blank(),
+    # axis.text=element_text(size=25),axis.title=element_text(size=25),
+    legend.text=element_text(size=10), legend.title = element_blank(),
+    axis.text=element_text(size=12),axis.title=element_text(size=12),
+    plot.title = element_text(size=10)) + 
+    geom_point(aes(x_mean, y_mean), size = 2) +
     geom_rect(aesthetics1, alpha=0.5, size=1.5) + 
     geom_rect(aesthetics2, fill=NA)
   
@@ -298,15 +359,15 @@ make_sensitivity_figure = function(name, var1="DIbinary", var2="accuracy", algos
     filter(algorithm %in% algos_plot) %>%
     # mutate(algorithm=recode(algorithm, ZafarFairness="Zafar")) # rename to Zafar for clarity
     mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.1"="FairGPparity*, target=0.1"))%>%
-        mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.1"="FairGPparity, target=0.1"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.1"="FairGPparity, target=0.1"))%>%
     mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.2"="FairGPparity*, target=0.2"))%>%
-        mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.2"="FairGPparity, target=0.2"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.2"="FairGPparity, target=0.2"))%>%
     mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.3"="FairGPparity*, target=0.3"))%>%
-        mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.3"="FairGPparity, target=0.3"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.3"="FairGPparity, target=0.3"))%>%
     mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.4"="FairGPparity*, target=0.4"))%>%
-        mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.4"="FairGPparity, target=0.4"))%>%
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.4"="FairGPparity, target=0.4"))%>%
     mutate(algorithm=recode(algorithm, "UGP_dem_par_in_True_tar_0.5"="FairGPparity*, target=0.5"))%>%
-        mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.5"="FairGPparity, target=0.5"))
+    mutate(algorithm=recode(algorithm, "UGP_dem_par_in_False_tar_0.5"="FairGPparity, target=0.5"))
   
   df$algorithm = factor(df$algorithm, levels= order) 
   if(grepl("sex", name)){
@@ -320,57 +381,57 @@ make_sensitivity_figure = function(name, var1="DIbinary", var2="accuracy", algos
 }
 ```
 
-## Algorithm sensitivity variable_1 vs variable_2
+<!-- ## Algorithm sensitivity variable_1 vs variable_2 -->
 
-```{r}
-order = c(
-  "FairGPparity*, target=0.1", "FairGPparity, target=0.1",
-  "FairGPparity*, target=0.2", "FairGPparity, target=0.2",
-  "FairGPparity*, target=0.3", "FairGPparity, target=0.3",
-  "FairGPparity*, target=0.4", "FairGPparity, target=0.4",
-  "FairGPparity*, target=0.5", "FairGPparity, target=0.5"
-)
+<!-- ```{r} -->
+<!-- order = c( -->
+<!--   "FairGPparity*, target=0.1", "FairGPparity, target=0.1", -->
+<!--   "FairGPparity*, target=0.2", "FairGPparity, target=0.2", -->
+<!--   "FairGPparity*, target=0.3", "FairGPparity, target=0.3", -->
+<!--   "FairGPparity*, target=0.4", "FairGPparity, target=0.4", -->
+<!--   "FairGPparity*, target=0.5", "FairGPparity, target=0.5" -->
+<!-- ) -->
 
-variable_1 = "DIbinary"
-add_for_1 = 0
+<!-- variable_1 = "DIbinary" -->
+<!-- add_for_1 = 0 -->
 
-variable_2 = "accuracy"
-add_for_2 = 0
+<!-- variable_2 = "accuracy" -->
+<!-- add_for_2 = 0 -->
 
-for (i in 1:N_file) {
-  # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="")
-  if(add_for_1){
-    var1_name = paste(file_attribute[i], "-", variable_1, sep="")
-  } else {
-    var1_name = variable_1
-  }
-  if(add_for_2){
-    var2_name = paste(file_attribute[i], "-", variable_2, sep="")
-  } else {
-    var2_name = variable_2
-  }
-  p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
-  print(p)
-  export_name = paste(file_name[i], "_tar.eps", sep="")
-  #ggsave(export_name, p)
-}
+<!-- for (i in 1:N_file) { -->
+<!--   # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="") -->
+<!--   if(add_for_1){ -->
+<!--     var1_name = paste(file_attribute[i], "-", variable_1, sep="") -->
+<!--   } else { -->
+<!--     var1_name = variable_1 -->
+<!--   } -->
+<!--   if(add_for_2){ -->
+<!--     var2_name = paste(file_attribute[i], "-", variable_2, sep="") -->
+<!--   } else { -->
+<!--     var2_name = variable_2 -->
+<!--   } -->
+<!--   p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name) -->
+<!--   print(p) -->
+<!--   export_name = paste(file_name[i], "_tar.eps", sep="") -->
+<!--   #ggsave(export_name, p) -->
+<!-- } -->
 
-```
+<!-- ``` -->
 
-## Algorithm Algorithm 0-PR vs 1-PR
+<!-- ## Algorithm Algorithm 0-PR vs 1-PR -->
 
-```{r}
-variable_1 = "0-PR"
-variable_2 = "1-PR"
+<!-- ```{r} -->
+<!-- variable_1 = "0-PR" -->
+<!-- variable_2 = "1-PR" -->
 
-for (i in 1:N_file) {
-  # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="")
-  var1_name = paste(variable_1, "-", file_attribute[i], sep="")
-  var2_name = paste(variable_2, "-", file_attribute[i], sep="")
-  
-  p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
-  print(p)
-  export_name = paste(file_name[i], "_PR.eps", sep="")
-  #ggsave(export_name, p)
-}
-```
+<!-- for (i in 1:N_file) { -->
+<!--   # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="") -->
+<!--   var1_name = paste(variable_1, "-", file_attribute[i], sep="") -->
+<!--   var2_name = paste(variable_2, "-", file_attribute[i], sep="") -->
+
+<!--   p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name) -->
+<!--   print(p) -->
+<!--   export_name = paste(file_name[i], "_PR.eps", sep="") -->
+<!--   #ggsave(export_name, p) -->
+<!-- } -->
+<!-- ``` -->

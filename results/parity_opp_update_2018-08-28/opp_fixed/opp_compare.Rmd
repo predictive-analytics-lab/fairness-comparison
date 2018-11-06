@@ -17,6 +17,7 @@ library(robust)
 library(ggpubr)
 library(fit.models)
 library(xlsx)
+library(cowplot)
 ```
 
 We'll be showing many different charts with a large number of different attributes, so a good
@@ -37,6 +38,9 @@ catscale10_2 = scale_fill_manual(values=colors_10)
 
 catscale20  = scale_colour_manual(values=colors_20)
 catscale20_2 = scale_fill_manual(values=colors_20)
+
+symbol = c(21:25, 1, 0, 5, 2, 6,
+           7:14, 3, 4)
 
 baseline_to_plot = c(
   "GP",
@@ -62,7 +66,7 @@ algos_to_plot = c(
   "FairGPopp*, TPR=0.7",
   "FairGPopp, TPR=0.6",
   "FairGPopp*, TPR=0.6"
-  )
+)
 
 order = c(algos_to_plot, baseline_to_plot)
 
@@ -87,13 +91,13 @@ basic_sensitivity_plot = function(sensitivity_summary, x_var, y_var) {
     label_x = gsub('sex', 'gender', quo_name(enquo(x_var)))
   } else {
     label_x = quo_name(enquo(x_var))
-    }
+  }
   
   if(grepl("sex", quo_name(enquo(y_var)))){
     label_y = gsub('sex', 'gender', quo_name(enquo(y_var)))
   } else {
     label_y = quo_name(enquo(y_var))
-    }
+  }
   
   ggplot(sensitivity_summary, aes(x=x_mean, y=y_mean, colour=algorithm)) + catscale20 + catscale20_2 +
     xlab(label_x) + ylab(label_y)
@@ -124,10 +128,16 @@ plot_rects_sensitivity_summary = function(basic_plot) {
                     ymin = y_mean - 0.5 * y_sd, 
                     ymax = y_mean + 0.5 * y_sd,
                     colour=algorithm)
-  basic_plot + theme_bw() + geom_point(aes(x_mean, y_mean), size = 2) + 
+  basic_plot + theme_bw() + theme(
+    # legend.position=c(0.1,0.2), legend.justification=c(0.1,0.2),
+    # legend.text=element_text(size=25), legend.title = element_blank(),
+    # axis.text=element_text(size=25),axis.title=element_text(size=25),
+    legend.text=element_text(size=10), legend.title = element_blank(),
+    axis.text=element_text(size=12),axis.title=element_text(size=12),
+    plot.title = element_text(size=10)) + 
+    geom_point(aes(x_mean, y_mean), size = 2) +
     geom_rect(aesthetics1, alpha=0.5, size=1.5) + 
     geom_rect(aesthetics2, fill=NA)
-
 }
 
 do_it_all = function(name, var1, var2, check.names=FALSE) {
@@ -228,11 +238,16 @@ make_scatter_figure = function(name, var1="race-TPRDiff", var2="accuracy", algos
   }else{
     fig_title = "Propublica (Race)"
   }
-  
+
   switch(display,
          off = ggplot(df, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
-           geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) + theme_bw() + 
-           labs(y=var2, x=var1, title=fig_title),
+           geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) + theme_bw() + theme(
+             # legend.position=c(0.1,0.2), legend.justification=c(0.1,0.2),
+             # legend.text=element_text(size=25), legend.title = element_blank(),
+             # axis.text=element_text(size=25),axis.title=element_text(size=25),
+             legend.text=element_text(size=13), legend.title = element_blank(),
+             axis.text=element_text(size=15),axis.title=element_text(size=15),
+             plot.title = element_text(size=15)) + labs(y=var2, x=var1, title=fig_title),
          title = ggplot(df, aes_q(x=x_var, y=y_var, colour=target_view, bg=target_view)) + color_used + color_used_2 +
            geom_point(size=3, aes_q(shape=target_view)) + scale_shape_manual(values=symbol) + theme_bw() + 
            labs(y=var2, x=var1, title=fig_title),
@@ -244,163 +259,218 @@ make_scatter_figure = function(name, var1="race-TPRDiff", var2="accuracy", algos
            labs(y=var2, x=var1, title=fig_title)
   )
 }
-
-
 ```
-
-
 
 ```{r setting}
 # dataset setting
 file_name = c("propublica-recidivism_race", "propublica-recidivism_sex")
 file_attribute = c("race", "sex")
 N_file = length(file_name)
-
 ```
 
 ## Algorithm sensitivity variable_1 vs variable_2
 
 ```{r}
+# variable_1 = "nTPRDiff"
+# add_for_1 = 1
+# 
+# variable_2 = "accuracy"
+# add_for_2 = 0
+# 
+# for (i in 1:N_file) {
+#   # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="")
+#   if(add_for_1){
+#     var1_name = paste(file_attribute[i], "-", variable_1, sep="")
+#   } else {
+#     var1_name = variable_1
+#   }
+#   if(add_for_2){
+#     var2_name = paste(file_attribute[i], "-", variable_2, sep="")
+#   } else {
+#     var2_name = variable_2
+#   }
+#   p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
+#   print(p)
+#   export_name = paste(file_name[i], "_opp_box.eps", sep="")
+#   #ggsave(export_name, p)
+# }
+
 variable_1 = "nTPRDiff"
 add_for_1 = 1
+target = "accuracy"
+add_for_target = 0
 
-variable_2 = "accuracy"
-add_for_2 = 0
-
-for (i in 1:N_file) {
-  # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="")
-  if(add_for_1){
-    var1_name = paste(file_attribute[i], "-", variable_1, sep="")
-  } else {
-    var1_name = variable_1
-  }
-  if(add_for_2){
-    var2_name = paste(file_attribute[i], "-", variable_2, sep="")
-  } else {
-    var2_name = variable_2
-  }
-  p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
-  print(p)
-  export_name = paste(file_name[i], "_opp_box.eps", sep="")
-  #ggsave(export_name, p)
+if(add_for_target){
+  target_name1 = paste(file_attribute[1], "-", target, sep="")
+} else {
+  target_name1 = target
 }
+if(add_for_1){
+  var1_name1 = paste(file_attribute[1], "-", variable_1, sep="")
+} else {
+  var1_name1 = variable_1
+}
+q_1 = make_sensitivity_figure(file_name[1], var1=var1_name1, var2=target_name1)
 
+if(add_for_target){
+  target_name2 = paste(file_attribute[2], "-", target, sep="")
+} else {
+  target_name2 = target
+}
+if(add_for_1){
+  var1_name2 = paste(file_attribute[2], "-", variable_1, sep="")
+} else {
+  var1_name2 = variable_1
+}
+q_2 = make_sensitivity_figure(file_name[2], var1=var1_name2, var2=target_name2)
+
+q = ggarrange(q_1, q_2, ncol = 2, nrow = 1, common.legend = TRUE, legend="right", align = "v", labels = c("(a)", "(b)"))
+
+print(q)
+export_name = paste("propublica_opp_box.eps", sep="")
+ggsave(export_name, q, width = 25, height = 9, units = "cm")
 ```
 
-## Algorithm sensitivity TPR vs TNR
+<!-- ## Algorithm sensitivity TPR vs TNR -->
+
+<!-- ```{r} -->
+<!-- variable_1 = "TPR" -->
+<!-- add_for_1 = 0 -->
+
+<!-- variable_2 = "TNR" -->
+<!-- add_for_2 = 0 -->
+
+<!-- for (i in 1:N_file) { -->
+<!--   # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="") -->
+<!--   if(add_for_1){ -->
+<!--     var1_name = paste(file_attribute[i], "-", variable_1, sep="") -->
+<!--   } else { -->
+<!--     var1_name = variable_1 -->
+<!--   } -->
+<!--   if(add_for_2){ -->
+<!--     var2_name = paste(file_attribute[i], "-", variable_2, sep="") -->
+<!--   } else { -->
+<!--     var2_name = variable_2 -->
+<!--   } -->
+<!--   # p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name) -->
+<!--   p = make_scatter_figure(file_name[i], var1 = var1_name, var2 = var2_name) -->
+<!--   print(p) -->
+<!--   export_name = paste(file_name[i], "_opp_box_tpr_tnr.eps", sep="") -->
+<!--   #ggsave(export_name, p) -->
+<!-- } -->
+
+<!-- ``` -->
+
+<!-- ## Algorithm sensitivity 0-TNR vs 1-TNR -->
+
+<!-- ```{r} -->
+<!-- variable_1 = "0-TNR" -->
+<!-- add_for_1 = 1 -->
+
+<!-- variable_2 = "1-TNR" -->
+<!-- add_for_2 = 1 -->
+
+<!-- for (i in 1:N_file) { -->
+<!--   # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="") -->
+<!--   if(add_for_1){ -->
+<!--     var1_name = paste(variable_1, "-", file_attribute[i], sep="") -->
+<!--   } else { -->
+<!--     var1_name = variable_1 -->
+<!--   } -->
+<!--   if(add_for_2){ -->
+<!--     var2_name = paste(variable_2, "-", file_attribute[i], sep="") -->
+<!--   } else { -->
+<!--     var2_name = variable_2 -->
+<!--   } -->
+<!--   # p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name) -->
+<!--   p = make_scatter_figure(file_name[i], var1 = var1_name, var2 = var2_name) -->
+<!--   print(p) -->
+<!--   export_name = paste(file_name[i], "_opp_box_0tnr_1tnr.eps", sep="") -->
+<!--   #ggsave(export_name, p) -->
+<!-- } -->
+
+<!-- ``` -->
+
+<!-- ## Algorithm sensitivity 0-TPR vs 1-TPR -->
+
+<!-- ```{r} -->
+<!-- variable_1 = "0-TPR" -->
+<!-- add_for_1 = 1 -->
+
+<!-- variable_2 = "1-TPR" -->
+<!-- add_for_2 = 1 -->
+
+<!-- for (i in 1:N_file) { -->
+<!--   # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="") -->
+<!--   if(add_for_1){ -->
+<!--     var1_name = paste(variable_1, "-", file_attribute[i], sep="") -->
+<!--   } else { -->
+<!--     var1_name = variable_1 -->
+<!--   } -->
+<!--   if(add_for_2){ -->
+<!--     var2_name = paste(variable_2, "-", file_attribute[i], sep="") -->
+<!--   } else { -->
+<!--     var2_name = variable_2 -->
+<!--   } -->
+<!--   # p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name) -->
+<!--   p = make_scatter_figure(file_name[i], var1 = var1_name, var2 = var2_name) -->
+<!--   print(p) -->
+<!--   export_name = paste(file_name[i], "_opp_box_0tpr_1tpr.eps", sep="") -->
+<!--   ggsave(export_name, p) -->
+<!-- } -->
+
+<!-- ``` -->
+
+## four in one plot
 
 ```{r}
 variable_1 = "TPR"
 add_for_1 = 0
-
 variable_2 = "TNR"
 add_for_2 = 0
-
-for (i in 1:N_file) {
-  # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="")
-  if(add_for_1){
-    var1_name = paste(file_attribute[i], "-", variable_1, sep="")
-  } else {
-    var1_name = variable_1
-  }
-  if(add_for_2){
-    var2_name = paste(file_attribute[i], "-", variable_2, sep="")
-  } else {
-    var2_name = variable_2
-  }
-  # p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
-  p = make_scatter_figure(file_name[i], var1 = var1_name, var2 = var2_name)
-  print(p)
-  export_name = paste(file_name[i], "_opp_box_tpr_tnr.eps", sep="")
-  ggsave(export_name, p)
+if(add_for_1){
+  var1_name1 = paste(file_attribute[1], "-", variable_1, sep="")
+  var1_name2 = paste(file_attribute[2], "-", variable_1, sep="")
+} else {
+  var1_name1 = variable_1
+  var1_name2 = variable_1
 }
-
-```
-
-## Algorithm sensitivity 0-TNR vs 1-TNR
-
-```{r}
-variable_1 = "0-TNR"
-add_for_1 = 1
-
-variable_2 = "1-TNR"
-add_for_2 = 1
-
-for (i in 1:N_file) {
-  # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="")
-  if(add_for_1){
-    var1_name = paste(variable_1, "-", file_attribute[i], sep="")
-  } else {
-    var1_name = variable_1
-  }
-  if(add_for_2){
-    var2_name = paste(variable_2, "-", file_attribute[i], sep="")
-  } else {
-    var2_name = variable_2
-  }
-  # p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
-  p = make_scatter_figure(file_name[i], var1 = var1_name, var2 = var2_name)
-  print(p)
-  export_name = paste(file_name[i], "_opp_box_0tnr_1tnr.eps", sep="")
-  #ggsave(export_name, p)
+if(add_for_2){
+  var2_name1 = paste(file_attribute[1], "-", variable_2, sep="")
+  var2_name2 = paste(file_attribute[2], "-", variable_2, sep="")
+} else {
+  var2_name1 = variable_2
+  var2_name2 = variable_2
 }
+p1 = make_scatter_figure(file_name[1], var1 = var1_name1, var2 = var2_name1)
+p2 = make_scatter_figure(file_name[2], var1 = var1_name2, var2 = var2_name2)
 
-```
 
-## Algorithm sensitivity 0-TPR vs 1-TPR
-
-```{r}
 variable_1 = "0-TPR"
 add_for_1 = 1
-
 variable_2 = "1-TPR"
 add_for_2 = 1
 
-for (i in 1:N_file) {
-  # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="")
-  if(add_for_1){
-    var1_name = paste(variable_1, "-", file_attribute[i], sep="")
-  } else {
-    var1_name = variable_1
-  }
-  if(add_for_2){
-    var2_name = paste(variable_2, "-", file_attribute[i], sep="")
-  } else {
-    var2_name = variable_2
-  }
-  # p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
-  p = make_scatter_figure(file_name[i], var1 = var1_name, var2 = var2_name)
-  print(p)
-  export_name = paste(file_name[i], "_opp_box_0tpr_1tpr.eps", sep="")
-  ggsave(export_name, p)
+if(add_for_1){
+  var1_name1 = paste(variable_1, "-", file_attribute[1], sep="")
+  var1_name2 = paste(variable_1, "-", file_attribute[2], sep="")
+} else {
+  var1_name1 = variable_1
+  var1_name2 = variable_1
 }
-
-```
-
-```{r}
-variable_1 = "TPRDiff"
-add_for_1 = 1
-
-variable_2 = "accuracy"
-add_for_2 = 0
-
-for (i in 1:N_file) {
-  # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="")
-  if(add_for_1){
-    var1_name = paste(file_attribute[i], "-", variable_1, sep="")
-  } else {
-    var1_name = variable_1
-  }
-  if(add_for_2){
-    var2_name = paste(file_attribute[i], "-", variable_2, sep="")
-  } else {
-    var2_name = variable_2
-  }
-  # p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
-  p = make_scatter_figure(file_name[i], var1 = var1_name, var2 = var2_name)
-  print(p)
-  export_name = paste(file_name[i], "_opp_box.eps", sep="")
-  # ggsave(export_name, p)
+if(add_for_2){
+  var2_name1 = paste(variable_2, "-", file_attribute[1], sep="")
+  var2_name2 = paste(variable_2, "-", file_attribute[2], sep="")
+} else {
+  var2_name1 = variable_2
+  var2_name2 = variable_2
 }
+p3 = make_scatter_figure(file_name[1], var1 = var1_name1, var2 = var2_name1)
+p4 = make_scatter_figure(file_name[2], var1 = var1_name2, var2 = var2_name2)
+
+q = ggarrange(p1, p2, p3, p4, ncol=4, nrow=1, common.legend = TRUE, legend="right", align = "hv", labels = c("(a)", "(b)", "(c)", "(d)"))
+print(q)
+export_name = paste("propublica_opp_scatter.eps", sep="")
+ggsave(export_name, q, width = 42, height = 9, units = "cm")
 
 ```

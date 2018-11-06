@@ -108,7 +108,14 @@ plot_rects_sensitivity_summary = function(basic_plot) {
                     ymin = y_mean - 0.5 * y_sd, 
                     ymax = y_mean + 0.5 * y_sd,
                     colour=algorithm)
-  basic_plot + theme_bw() + geom_point(aes(x_mean, y_mean), size = 2) + 
+  basic_plot + theme_bw() + theme(
+    # legend.position=c(0.1,0.2), legend.justification=c(0.1,0.2),
+    # legend.text=element_text(size=25), legend.title = element_blank(),
+    # axis.text=element_text(size=25),axis.title=element_text(size=25),
+    legend.text=element_text(size=10), legend.title = element_blank(),
+    axis.text=element_text(size=12),axis.title=element_text(size=12),
+    plot.title = element_text(size=10)) + 
+    geom_point(aes(x_mean, y_mean), size = 2) +
     geom_rect(aesthetics1, alpha=0.5, size=1.5) + 
     geom_rect(aesthetics2, fill=NA)
 }
@@ -199,22 +206,50 @@ add_for_1 = 0
 variable_2 = "accuracy"
 add_for_2 = 0
 
-for (i in 1:N_file) {
-  # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="")
-  if(add_for_1){
-    var1_name = paste(file_attribute[i], "-", variable_1, sep="")
-  } else {
-    var1_name = variable_1
-  }
-  if(add_for_2){
-    var2_name = paste(file_attribute[i], "-", variable_2, sep="")
-  } else {
-    var2_name = variable_2
-  }
-  p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
-  print(p)
-  export_name = paste(file_name[i], "_demo_box.eps", sep="")
-  ggsave(export_name, p)
-}
+# for (i in 1:N_file) {
+#   # temp_name = paste(file_name[i], "_numerical-binsensitive.csv", sep="")
+#   if(add_for_1){
+#     var1_name = paste(file_attribute[i], "-", variable_1, sep="")
+#   } else {
+#     var1_name = variable_1
+#   }
+#   if(add_for_2){
+#     var2_name = paste(file_attribute[i], "-", variable_2, sep="")
+#   } else {
+#     var2_name = variable_2
+#   }
+#   p = make_sensitivity_figure(file_name[i], var1 = var1_name, var2 = var2_name)
+#   print(p)
+#   export_name = paste(file_name[i], "_demo_box.eps", sep="")
+#   ggsave(export_name, p)
+# }
 
+if(add_for_target){
+  target_name1 = paste(file_attribute[1], "-", target, sep="")
+} else {
+  target_name1 = target
+}
+if(add_for_1){
+  var1_name1 = paste(file_attribute[1], "-", variable_1, sep="")
+} else {
+  var1_name1 = variable_1
+}
+q_1 = make_sensitivity_figure(file_name[1], var1=var1_name1, var2=target_name1)
+
+if(add_for_target){
+  target_name2 = paste(file_attribute[2], "-", target, sep="")
+} else {
+  target_name2 = target
+}
+if(add_for_1){
+  var1_name2 = paste(file_attribute[2], "-", variable_1, sep="")
+} else {
+  var1_name2 = variable_1
+}
+q_2 = make_sensitivity_figure(file_name[2], var1=var1_name2, var2=target_name2)
+
+q = ggarrange(q_1, q_2, ncol=2, nrow=1, common.legend = TRUE, legend="right")
+print(q)
+export_name = paste("adult_parity_box.eps", sep="")
+ggsave(export_name, q, width = 25, height = 9, units = "cm")
 ```
