@@ -20,13 +20,12 @@ class UGP(Algorithm):
     """
     This class calls the UniversalGP code
     """
+    basename = "UGP"
 
-    def __init__(self, s_as_input=True, use_lr=False):
+    def __init__(self, s_as_input=True):
         super().__init__()
         self.counter = 0
         self.s_as_input = s_as_input
-        self.use_lr = use_lr
-        self.basename = "ULR" if use_lr else "UGP"
         self.name = f"{self.basename}_in_{s_as_input}"
 
     def run(self, *data):
@@ -121,9 +120,10 @@ class UGP(Algorithm):
         """
         return dict(s_as_input=self.s_as_input)
 
-    def _additional_parameters(self, _):
+    @staticmethod
+    def _additional_parameters(_):
         return dict(
-            inf='LogReg' if self.use_lr else 'VariationalWithS',
+            inf='VariationalWithS',
         )
 
     def _save_in_json(self, save_path):
@@ -140,7 +140,7 @@ class UGPDemPar(UGP):
     MAX = 4
 
     def __init__(self, s_as_input=True, target_acceptance=None, average_prediction=False,
-                 target_mode=MEAN, marginal=False, use_lr=False, precision_target=1.0):
+                 target_mode=MEAN, marginal=False, precision_target=1.0):
         """
         Args:
             s_as_input: should the sensitive attribute be part of the input?
@@ -149,10 +149,9 @@ class UGPDemPar(UGP):
                                 predictions
             target_mode: if no target rate is given, how is the target chosen?
             marginal: when doing average_prediction, should the prior of s be taken into account?
-            use_lr: use logistic regression instead of Gaussian Processes
             precision_target: how similar should target labels and true labels be
         """
-        super().__init__(s_as_input=s_as_input, use_lr=use_lr)
+        super().__init__(s_as_input=s_as_input)
         if s_as_input and average_prediction:
             self.name = f"{self.basename}_dem_par_av_True"
             if marginal:
@@ -199,7 +198,7 @@ class UGPDemPar(UGP):
             p_s = [0.5] * 2
 
         return dict(
-            inf='FairLogReg' if self.use_lr else 'VariationalYbar',
+            inf='VariationalYbar',
             target_rate1=target_rate[0] if isinstance(target_rate, tuple) else target_rate,
             target_rate2=target_rate[1] if isinstance(target_rate, tuple) else target_rate,
             biased_acceptance1=biased_acceptance[0],
@@ -216,8 +215,8 @@ class UGPDemPar(UGP):
 class UGPEqOpp(UGP):
     """GP algorithm which enforces equality of opportunity"""
     def __init__(self, s_as_input=True, average_prediction=False, tpr=None, marginal=False,
-                 tnr0=None, tnr1=None, tpr0=None, tpr1=None, use_lr=False):
-        super().__init__(s_as_input=s_as_input, use_lr=use_lr)
+                 tnr0=None, tnr1=None, tpr0=None, tpr1=None):
+        super().__init__(s_as_input=s_as_input)
         if s_as_input and average_prediction:
             self.name = "{self.basename}_eq_opp_av_True"
             if marginal:
