@@ -54,7 +54,7 @@ class UGP(Algorithm):
         """
         self.counter += 1
         # Separate the data and make sure the labels are either 0 or 1
-        raw_data, label_converter = _prepare_data(*data)
+        raw_data, label_converter, gpu = _prepare_data(*data)
 
         # Set algorithm dependent parameters
         parameters = self._additional_parameters(raw_data)
@@ -69,7 +69,7 @@ class UGP(Algorithm):
             # Construct and execute command
             model_name = "local"  # f"run{self.counter}_s_as_input_{self.s_as_input}"
             self.run_ugp(_flags(parameters, str(data_path), tmpdir, self.s_as_input, model_name,
-                                raw_data['ytrain'].shape[0]))
+                                raw_data['ytrain'].shape[0], gpu))
 
             # Read the results from the numpy file 'predictions.npz'
             output = np.load(tmp_path / Path(model_name) / Path("predictions.npz"))
@@ -269,7 +269,7 @@ class UGPEqOpp(UGP):
 
     def run(self, *data):
         self.counter += 1
-        raw_data, label_converter = _prepare_data(*data)
+        raw_data, label_converter, gpu = _prepare_data(*data)
 
         parameters = self._additional_parameters(raw_data)
 
@@ -278,7 +278,7 @@ class UGPEqOpp(UGP):
             data_path = tmp_path / Path("data.npz")
             model_name = "local"  # f"run{self.counter}_s_as_input_{self.s_as_input}"
             flags = _flags(parameters, str(data_path), tmpdir, self.s_as_input, model_name,
-                           len(raw_data['ytrain']))
+                           len(raw_data['ytrain']), gpu)
 
             if self.odds is None:
                 # Split the training data into train and dev and save it to `data.npz`
@@ -330,7 +330,7 @@ def _prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_a
     # Check labels
     label, label_converter = fix_labels(label, positive_class_val)
     return dict(xtrain=nosensitive[0], xtest=nosensitive[1], ytrain=label[0], ytest=label[1],
-                strain=sensitive[0], stest=sensitive[1]), label_converter
+                strain=sensitive[0], stest=sensitive[1]), label_converter, params['gpu']
 
 
 def _prior_s(sensitive):
@@ -406,7 +406,7 @@ def _split_train_dev(inputs, labels, sensitive):
                 ytest=labels[test_fraction], stest=sensitive[test_fraction])
 
 
-def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train):
+def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train, gpu):
     batch_size = min(MAX_BATCH_SIZE, num_train)
     return {**dict(
         tf_mode='eager' if USE_EAGER else 'graph',
@@ -426,7 +426,7 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train):
         save_dir=save_dir,  # "/home/ubuntu/out2/",
         plot='',
         logging_steps=5,
-        gpus=f"{int(sys.argv[1])}" if len(sys.argv) > 1 else '0',
+        gpus=str(gpu),
         preds_path='predictions.npz',  # save the predictions into `predictions.npz`
         num_components=1,
         num_samples=1000,

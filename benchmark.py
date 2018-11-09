@@ -11,6 +11,7 @@ from metrics.list import get_metrics
 from algorithms.ParamGridSearch import ParamGridSearch
 
 NUM_TRIALS_DEFAULT = 5
+GPU_DEFAULT = '0'
 
 
 def get_algorithm_names():
@@ -21,8 +22,8 @@ def get_algorithm_names():
     return result
 
 
-def run(gpu=0, num_trials=NUM_TRIALS_DEFAULT, datasets=get_dataset_names(),
-        algorithms=get_algorithm_names()):
+def run(num_trials=NUM_TRIALS_DEFAULT, datasets=get_dataset_names(),
+        algorithms=get_algorithm_names(), gpu=GPU_DEFAULT):
     algorithms_to_run = algorithms
 
     print("Datasets: '%s'" % datasets)
@@ -69,7 +70,8 @@ def run(gpu=0, num_trials=NUM_TRIALS_DEFAULT, datasets=get_dataset_names(),
                                                                           processed_dataset,
                                                                           all_sensitive_attributes,
                                                                           sensitive,
-                                                                          supported_tag)
+                                                                          supported_tag,
+                                                                          gpu)
                         except Exception as e:
                             import traceback
                             traceback.print_exc(file=sys.stderr)
@@ -102,7 +104,7 @@ def write_alg_results(file_handle, alg_name, params, run_id, results_list):
 
 
 def run_eval_alg(algorithm, train, test, dataset, processed_data, all_sensitive_attributes,
-                 single_sensitive, tag):
+                 single_sensitive, tag, gpu):
     """
     Runs the algorithm and gets the resulting metric evaluations.
     """
@@ -111,16 +113,19 @@ def run_eval_alg(algorithm, train, test, dataset, processed_data, all_sensitive_
 
     # get the actual classifications and sensitive attributes
     actual = test[dataset.get_class_attribute()].values.tolist()
-    sensitive = test[single_sensitive].values.tolist()
 
-    predicted, params, predictions_list = run_alg(algorithm,
-                                                  train,
-                                                  test,
-                                                  dataset,
-                                                  all_sensitive_attributes,
-                                                  single_sensitive,
-                                                  privileged_vals,
-                                                  positive_val)
+    params = {**algorithm.get_default_params(), 'gpu': gpu}
+    # Note: the training and test set here still include the sensitive attributes because
+    # some fairness aware algorithms may need those in the dataset.  They should be removed
+    # before any model training is done.
+    predicted, predictions_list = algorithm.run(train,
+                                                test,
+                                                dataset.get_class_attribute(),
+                                                positive_val,
+                                                all_sensitive_attributes,
+                                                single_sensitive,
+                                                privileged_vals,
+                                                params)
 
     # make dictionary mapping sensitive names to sensitive attr test data lists
     dict_sensitive_lists = {}
@@ -136,9 +141,9 @@ def run_eval_alg(algorithm, train, test, dataset, processed_data, all_sensitive_
 
     # handling the set of predictions returned by ParamGridSearch
     results_lol = []
-    if len(predictions_list) > 0:
+    if predictions_list:
         for param_name, param_val, predictions in predictions_list:
-            params_dict = {param_name : param_val}
+            params_dict = {param_name: param_val}
             results = []
             for metric in get_metrics(dataset, sensitive_dict, tag):
                 result = metric.calc(actual, predictions, dict_sensitive_lists, single_sensitive,
@@ -147,21 +152,6 @@ def run_eval_alg(algorithm, train, test, dataset, processed_data, all_sensitive_
             results_lol.append((params_dict, results))
 
     return params, one_run_results, results_lol
-
-
-def run_alg(algorithm, train, test, dataset, all_sensitive_attributes, single_sensitive,
-            privileged_vals, positive_val):
-    class_attr = dataset.get_class_attribute()
-    params = algorithm.get_default_params()
-
-    # Note: the training and test set here still include the sensitive attributes because
-    # some fairness aware algorithms may need those in the dataset.  They should be removed
-    # before any model training is done.
-    predictions, predictions_list =  \
-        algorithm.run(train, test, class_attr, positive_val, all_sensitive_attributes,
-                      single_sensitive, privileged_vals, params)
-
-    return predictions, params, predictions_list
 
 
 def get_metrics_list(dataset, sensitive_dict, tag):
