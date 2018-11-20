@@ -6,7 +6,6 @@ from .UGPAlgorithm import UGP, UGPDemPar, UGPEqOpp
 UGP_PATH = "/home/ubuntu/code/UniversalGP/gaussian_process.py"
 BATCH_SIZE = 32
 EPOCHS = 10
-USE_BIAS = True
 
 
 class ULR(UGP):
@@ -14,12 +13,20 @@ class ULR(UGP):
     basename = "ULR"
     inference_method = "LogReg"
 
-    def __init__(self, l2_factor=0.1, **kwargs):
+    def __init__(self, l2_factor=0.1, use_bias=True, **kwargs):
         super().__init__(**kwargs)
         self.l2_factor = l2_factor
+        self.use_bias = use_bias
 
     def _additional_parameters(self, raw_data):
         return _log_reg_params(super(), self, raw_data)
+
+    @staticmethod
+    def get_param_info():
+        return dict(l2_factor=[], use_bias=[True, False])
+
+    def get_default_params(self):
+        return dict(l2_factor=self.l2_factor, use_bias=self.use_bias)
 
 
 class ULRDemPar(UGPDemPar):
@@ -27,12 +34,20 @@ class ULRDemPar(UGPDemPar):
     basename = "ULR"
     inference_method = "FairLogReg"
 
-    def __init__(self, l2_factor=0.1, **kwargs):
+    def __init__(self, l2_factor=0.1, use_bias=True, **kwargs):
         super().__init__(**kwargs)
         self.l2_factor = l2_factor
+        self.use_bias = use_bias
 
     def _additional_parameters(self, raw_data):
         return _log_reg_params(super(), self, raw_data)
+
+    @staticmethod
+    def get_param_info():
+        return dict(l2_factor=[], use_bias=[True, False])
+
+    def get_default_params(self):
+        return dict(l2_factor=self.l2_factor, use_bias=self.use_bias)
 
 
 class ULREqOpp(UGPEqOpp):
@@ -40,12 +55,20 @@ class ULREqOpp(UGPEqOpp):
     basename = "ULR"
     inference_method = "EqOddsLogReg"
 
-    def __init__(self, l2_factor=0.1, **kwargs):
+    def __init__(self, l2_factor=0.1, use_bias=True, **kwargs):
         super().__init__(**kwargs)
         self.l2_factor = l2_factor
+        self.use_bias = use_bias
 
     def _additional_parameters(self, raw_data):
         return _log_reg_params(super(), self, raw_data)
+
+    @staticmethod
+    def get_param_info():
+        return dict(l2_factor=[], use_bias=[True, False])
+
+    def get_default_params(self):
+        return dict(l2_factor=self.l2_factor, use_bias=self.use_bias)
 
 
 def _log_reg_params(base_obj, obj, raw_data):
@@ -55,9 +78,9 @@ def _log_reg_params(base_obj, obj, raw_data):
         batch_size=BATCH_SIZE,
         train_steps=(raw_data['ytrain'].shape[0] * EPOCHS) // BATCH_SIZE,
         dataset_standardize=True,
-        use_bias=USE_BIAS,
+        use_bias=obj.use_bias,
         lr_l2_kernel_factor=obj.l2_factor,
-        lr_l2_bias_factor=obj.l2_factor,
+        lr_l2_bias_factor=0.0,
         inf=obj.inference_method,
     ))
     return params

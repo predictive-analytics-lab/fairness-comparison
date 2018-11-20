@@ -96,7 +96,7 @@ class UGP(Algorithm):
         explored. This function should only be implemented if the algorithm has specific parameters
         that should be tuned, e.g., for trading off between fairness and accuracy.
         """
-        return dict(s_as_input=[True, False])
+        return {}
 
     @staticmethod
     def get_supported_data_types():
@@ -118,7 +118,7 @@ class UGP(Algorithm):
         the algorithm. If not implemented by a specific algorithm, this returns the empty
         dictionary.
         """
-        return dict(s_as_input=self.s_as_input)
+        return {}
 
     @staticmethod
     def _additional_parameters(_):
