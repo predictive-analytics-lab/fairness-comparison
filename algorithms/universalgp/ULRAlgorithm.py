@@ -21,6 +21,12 @@ class ULR(UGP):
     def _additional_parameters(self, raw_data):
         return _log_reg_params(super(), self, raw_data)
 
+    def run(self, train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
+            single_sensitive, privileged_vals, params):
+        self.l2_factor = params['l2_factor']
+        return super().run(train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
+                           single_sensitive, privileged_vals, params)
+
     @staticmethod
     def get_param_info():
         return dict(l2_factor=[], use_bias=[True, False])
@@ -42,6 +48,12 @@ class ULRDemPar(UGPDemPar):
     def _additional_parameters(self, raw_data):
         return _log_reg_params(super(), self, raw_data)
 
+    def run(self, train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
+            single_sensitive, privileged_vals, params):
+        self.l2_factor = params['l2_factor']
+        return super().run(train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
+                           single_sensitive, privileged_vals, params)
+
     @staticmethod
     def get_param_info():
         return dict(l2_factor=[], use_bias=[True, False])
@@ -62,6 +74,12 @@ class ULREqOpp(UGPEqOpp):
 
     def _additional_parameters(self, raw_data):
         return _log_reg_params(super(), self, raw_data)
+
+    def run(self, train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
+            single_sensitive, privileged_vals, params):
+        self.l2_factor = params['l2_factor']
+        return super().run(train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
+                           single_sensitive, privileged_vals, params)
 
     @staticmethod
     def get_param_info():
