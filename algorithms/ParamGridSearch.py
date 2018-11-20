@@ -32,7 +32,7 @@ class ParamGridSearch(Algorithm):
                                              trial_params)
                       all_predictions.append( (param_name, param_val, predictions) )
                   except Exception as e:
-                      print("run for parameters %s failed: %s" % (params, e))
+                      print("run for parameters %s failed: %s" % (param_name, e))
         best_predictions = self.find_best(all_predictions, train_df, test_df, class_attr,
                                           positive_class_val, sensitive_attrs, single_sensitive,
                                           privileged_vals, params)
@@ -62,7 +62,8 @@ class ParamGridSearch(Algorithm):
         return best
 
     def reset_params(self, param_name, param_val, param_dict):
-        for old_name in param_dict:
+        old_names = list(param_dict.keys())
+        for old_name in old_names:
             del param_dict[old_name]
         param_dict[param_name] = param_val
 
