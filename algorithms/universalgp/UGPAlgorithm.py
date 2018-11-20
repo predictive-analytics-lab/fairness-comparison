@@ -330,7 +330,7 @@ def _prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_a
     # Check labels
     label, label_converter = fix_labels(label, positive_class_val)
     return dict(xtrain=nosensitive[0], xtest=nosensitive[1], ytrain=label[0], ytest=label[1],
-                strain=sensitive[0], stest=sensitive[1]), label_converter, params['gpu']
+                strain=sensitive[0], stest=sensitive[1]), label_converter, params.get('gpu', 0)
 
 
 def _prior_s(sensitive):
