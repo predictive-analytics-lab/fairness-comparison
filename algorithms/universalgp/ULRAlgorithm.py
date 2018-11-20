@@ -6,6 +6,7 @@ from .UGPAlgorithm import UGP, UGPDemPar, UGPEqOpp
 UGP_PATH = "/home/ubuntu/code/UniversalGP/gaussian_process.py"
 BATCH_SIZE = 32
 EPOCHS = 10
+FACTOR_SET = [1, 0.1, 0.01, 0.001]
 
 
 class ULR(UGP):
@@ -15,24 +16,26 @@ class ULR(UGP):
 
     def __init__(self, l2_factor=0.1, use_bias=True, **kwargs):
         super().__init__(**kwargs)
-        self.l2_factor = l2_factor
+        self.default_l2_factor = l2_factor
         self.use_bias = use_bias
+        if use_bias:
+            self.name += "_use_bias"
 
     def _additional_parameters(self, raw_data):
         return _log_reg_params(super(), self, raw_data)
 
     def run(self, train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
             single_sensitive, privileged_vals, params):
-        self.l2_factor = params['l2_factor']
+        self.l2_factor = params.get('l2_factor', self.default_l2_factor)
         return super().run(train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
                            single_sensitive, privileged_vals, params)
 
     @staticmethod
     def get_param_info():
-        return dict(l2_factor=[], use_bias=[True, False])
+        return dict(l2_factor=FACTOR_SET, use_bias=[])
 
     def get_default_params(self):
-        return dict(l2_factor=self.l2_factor, use_bias=self.use_bias)
+        return dict(l2_factor=self.default_l2_factor, use_bias=self.use_bias)
 
 
 class ULRDemPar(UGPDemPar):
@@ -56,7 +59,7 @@ class ULRDemPar(UGPDemPar):
 
     @staticmethod
     def get_param_info():
-        return dict(l2_factor=[], use_bias=[True, False])
+        return dict(l2_factor=FACTOR_SET, use_bias=[True, False])
 
     def get_default_params(self):
         return dict(l2_factor=self.l2_factor, use_bias=self.use_bias)
@@ -83,7 +86,7 @@ class ULREqOpp(UGPEqOpp):
 
     @staticmethod
     def get_param_info():
-        return dict(l2_factor=[], use_bias=[True, False])
+        return dict(l2_factor=FACTOR_SET, use_bias=[True, False])
 
     def get_default_params(self):
         return dict(l2_factor=self.l2_factor, use_bias=self.use_bias)
