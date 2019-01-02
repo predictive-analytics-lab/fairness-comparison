@@ -9,7 +9,7 @@ from algorithms.baseline.GaussianNB import GaussianNB
 from algorithms.baseline.LogisticRegression import LogisticRegression
 from algorithms.ParamGridSearch import ParamGridSearch
 from algorithms.universalgp.UGPAlgorithm import UGP, UGPDemPar, UGPEqOpp
-from algorithms.universalgp.ULRAlgorithm import ULR, ULRDemPar, ULREqOpp
+from algorithms.universalgp.ULRAlgorithm import ulr, ulr_dem_par, ulr_eq_opp
 
 from metrics.DIAvgAll import DIAvgAll
 from metrics.Accuracy import Accuracy
