@@ -21,18 +21,18 @@ class ParamGridSearch(Algorithm):
         all_predictions = []
         search_space = self.algorithm.get_param_info()
         for param_name in search_space:
-             ## Note: this only maximizes one parameter at a time - if the maximum involves
-             ## two parameters being set, this will not find it.
-             for param_val in search_space[param_name]:
-                  trial_params = { param_name : param_val }
-                  if True:
-                      predictions, trash = \
-                          self.algorithm.run(train_df, test_df, class_attr, positive_class_val,
-                                             sensitive_attrs, single_sensitive, privileged_vals,
-                                             trial_params)
-                      all_predictions.append( (param_name, param_val, predictions) )
-                  # except Exception as e:
-                  #     print("run for parameters %s failed: %s" % (param_name, e))
+            # Note: this only maximizes one parameter at a time - if the maximum involves
+            # two parameters being set, this will not find it.
+            for param_val in search_space[param_name]:
+                trial_params = {param_name: param_val}
+                try:
+                    predictions, _ = \
+                        self.algorithm.run(train_df, test_df, class_attr, positive_class_val,
+                                           sensitive_attrs, single_sensitive, privileged_vals,
+                                           trial_params)
+                    all_predictions.append((param_name, param_val, predictions))
+                except Exception as e:
+                    print(f"run for parameters {param_name} with value {param_val} failed: {e}")
         best_predictions = self.find_best(all_predictions, train_df, test_df, class_attr,
                                           positive_class_val, sensitive_attrs, single_sensitive,
                                           privileged_vals, params)
