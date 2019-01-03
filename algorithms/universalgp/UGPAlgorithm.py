@@ -72,8 +72,9 @@ class UGP(Algorithm):
                                 raw_data['ytrain'].shape[0], gpu))
 
             # Read the results from the numpy file 'predictions.npz'
-            output = np.load(tmp_path / Path(model_name) / Path("predictions.npz"))
-            pred_mean = output['pred_mean']
+            with (tmp_path / model_name / "predictions.npz").open('rb') as f:
+                output = np.load(f)
+                pred_mean = output['pred_mean']
 
         # Convert the result to the expected format
         return label_converter((pred_mean > 0.5).astype(raw_data['ytest'].dtype)[:, 0]), []
@@ -84,7 +85,7 @@ class UGP(Algorithm):
         cmd = f"python {UGP_PATH} "
         for key, value in flags.items():
             if isinstance(value, str):
-                cmd += f" --{key}='{value}'"
+                cmd += f" --{key}=\"{value}\""
             else:
                 cmd += f" --{key}={value}"
         call(cmd, shell=True)  # run `cmd`
