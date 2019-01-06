@@ -8,10 +8,11 @@ from algorithms.baseline.DecisionTree import DecisionTree
 from algorithms.baseline.GaussianNB import GaussianNB
 from algorithms.baseline.LogisticRegression import LogisticRegression
 from algorithms.ParamGridSearch import ParamGridSearch
+from algorithms.FairGridSearch import FairGridSearch
 from algorithms.universalgp.UGPAlgorithm import UGP, UGPDemPar, UGPEqOpp
 from algorithms.universalgp.ULRAlgorithm import ulr, ulr_dem_par, ulr_eq_opp
 
-from metrics.DIAvgAll import DIAvgAll
+from metrics.DIBinary import DIBinary
 from metrics.Accuracy import Accuracy
 from metrics.MCC import MCC
 
