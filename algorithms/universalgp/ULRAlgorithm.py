@@ -7,7 +7,7 @@ from .UGPAlgorithm import UGP, UGPDemPar, UGPEqOpp
 UGP_PATH = "/home/ubuntu/code/UniversalGP/gaussian_process.py"
 BATCH_SIZE = 32
 EPOCHS = 10
-FACTOR_SET = np.power(10, np.linspace(-3, -1, 3))  # [0.1, 0.01, 0.001]
+FACTOR_SET = np.power(10, np.linspace(-4, -1, 15))  # [0.1, 0.01, 0.001]
 
 
 class ULRBase:
