@@ -1,24 +1,21 @@
 from metrics.Accuracy import Accuracy
-from metrics.BCR import BCR
+# from metrics.BCR import BCR
 from metrics.CalibrationNeg import CalibrationNeg
 from metrics.CalibrationPos import CalibrationPos
 from metrics.CV import CV
 from metrics.DIAvgAll import DIAvgAll
 from metrics.DIBinary import DIBinary
-from metrics.EqOppo_fn_diff import EqOppo_fn_diff
-from metrics.EqOppo_fn_ratio import EqOppo_fn_ratio
-from metrics.EqOppo_fp_diff import EqOppo_fp_diff
-from metrics.EqOppo_fp_ratio import EqOppo_fp_ratio
 from metrics.FNR import FNR
 from metrics.FPR import FPR
-from metrics.MCC import MCC
+# from metrics.MCC import MCC
 from metrics.SensitiveMetric import SensitiveMetric
 from metrics.TNR import TNR
 from metrics.TPR import TPR
 from metrics.PR import PR
+from metrics.tpr_norm_diff import TPRNormDiff, TNRNormDiff
 
-METRICS = [Accuracy(), TPR(), TNR(), BCR(), MCC(),        # accuracy metrics
-           DIBinary(), DIAvgAll(), CV(),                  # fairness metrics
+METRICS = [Accuracy(), TPR(), TNR(),        # accuracy metrics
+           DIBinary(), DIAvgAll(), TPRNormDiff(), TNRNormDiff(), CV(),           # fairness metrics
            SensitiveMetric(Accuracy), SensitiveMetric(TPR), SensitiveMetric(TNR),
            SensitiveMetric(FPR), SensitiveMetric(FNR), SensitiveMetric(PR),
            SensitiveMetric(CalibrationPos), SensitiveMetric(CalibrationNeg)]
