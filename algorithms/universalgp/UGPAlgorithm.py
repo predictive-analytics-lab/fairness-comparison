@@ -121,8 +121,7 @@ class UGP(Algorithm):
         """
         return {}
 
-    @staticmethod
-    def _additional_parameters(_):
+    def _additional_parameters(self, _):
         return dict(
             inf='VariationalWithS',
         )
