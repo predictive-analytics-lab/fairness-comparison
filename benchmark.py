@@ -52,13 +52,13 @@ def run(num_trials=NUM_TRIALS_DEFAULT, datasets=get_dataset_names(),
 
                 print("    Algorithm: %s" % algorithm.get_name())
                 print("       supported types: %s" % algorithm.get_supported_data_types())
-                if algorithm.__class__ is ParamGridSearch:
-                    param_files =  \
-                        dict((k, create_detailed_file(
-                                     dataset_obj.get_param_results_filename(sensitive, k,
-                                                                            algorithm.get_name()),
-                                     dataset_obj, processed_dataset.get_sensitive_values(k), k))
-                          for k in train_test_splits.keys())
+                if isinstance(algorithm, ParamGridSearch):
+                    param_files = {
+                        k: create_detailed_file(
+                            dataset_obj.get_param_results_filename(sensitive, k,
+                                                                   algorithm.get_name()),
+                            dataset_obj, processed_dataset.get_sensitive_values(k), k)
+                        for k in train_test_splits.keys()}
                 for i in range(0, num_trials):
                     for supported_tag in algorithm.get_supported_data_types():
                         train, test = train_test_splits[supported_tag][i]
@@ -79,7 +79,7 @@ def run(num_trials=NUM_TRIALS_DEFAULT, datasets=get_dataset_names(),
                         else:
                             write_alg_results(detailed_files[supported_tag],
                                               algorithm.get_name(), params, i, results)
-                            if algorithm.__class__ is ParamGridSearch:
+                            if isinstance(algorithm, ParamGridSearch):
                                 for params, results in param_results:
                                     write_alg_results(param_files[supported_tag],
                                                       algorithm.get_name(), params, i, results)
