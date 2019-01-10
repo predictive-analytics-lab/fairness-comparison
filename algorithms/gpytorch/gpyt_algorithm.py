@@ -8,11 +8,12 @@ import numpy as np
 from ..Algorithm import Algorithm
 
 # TODO: find a better way to specify the path
-GPYT_PATH = "/home/ubuntu/code/fair-gpytorch/run.py"
-PYTHON_EXE = "/home/ubuntu/anaconda3/envs/pytorch_p36/bin/python -m pdb -c continue"
+GPYT_PATH = "/home/ubuntu/code/fair-gpytorch/fairgp/run.py"
+# PYTHON_EXE = "/home/ubuntu/anaconda3/envs/pytorch_p36/bin/python -m pdb -c continue"
+PYTHON_EXE = "/home/ubuntu/anaconda3/envs/pytorch_p36/bin/python"
 MAX_EPOCHS = 10000
 MAX_BATCH_SIZE = 10000
-MAX_NUM_INDUCING = 5000  # 2500 seems to be more than enough
+MAX_NUM_INDUCING = 2500  # 2500 seems to be more than enough
 
 
 class GPyT(Algorithm):
@@ -414,20 +415,20 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train, g
         dataset_path=data_path,
         cov='RBFKernel',
         optimizer="Adam",
-        lr=0.005,
+        lr=0.01,
         # lr=0.1,
         lr_drop_steps=0,
         lr_drop_factor=0.2,
         model_name=model_name,
         batch_size=batch_size,
-        # epochs=min(MAX_EPOCHS, _num_epochs(num_train)),
-        epochs=100,
-        eval_epochs=20,
+        epochs=min(MAX_EPOCHS, _num_epochs(num_train)),
+        # epochs=100,
+        eval_epochs=2,
         summary_steps=100000,
         chkpnt_steps=100000,
         save_dir=save_dir,  # "/home/ubuntu/out2/",
         plot='',
-        logging_steps=5,
+        logging_steps=1,
         gpus=str(gpu),
         preds_path='predictions.npz',  # save the predictions into `predictions.npz`
         num_components=1,
@@ -436,7 +437,7 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train, g
         optimize_inducing=True,
         use_loo=False,
         loo_steps=0,
-        length_scale=1.0,
+        length_scale=1.2,
         sf=1.0,
         iso=False,
         num_samples_pred=2000,
