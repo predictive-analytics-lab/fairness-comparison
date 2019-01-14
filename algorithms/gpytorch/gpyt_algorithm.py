@@ -8,11 +8,11 @@ import numpy as np
 from ..Algorithm import Algorithm
 
 # TODO: find a better way to specify the path
-GPYT_PATH = "/home/ubuntu/code/fair-gpytorch/fairgp/run.py"
+GPYT_PATH = "/home/ubuntu/code/fair-gpytorch/run.py"
 # PYTHON_EXE = "/home/ubuntu/anaconda3/envs/pytorch_p36/bin/python -m pdb -c continue"
 PYTHON_EXE = "/home/ubuntu/anaconda3/envs/pytorch_p36/bin/python"
 MAX_EPOCHS = 10000
-MAX_BATCH_SIZE = 10000
+MAX_BATCH_SIZE = 10000  # can go up to 10000
 MAX_NUM_INDUCING = 2500  # 2500 seems to be more than enough
 
 
@@ -415,20 +415,20 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train, g
         dataset_path=data_path,
         cov='RBFKernel',
         optimizer="Adam",
-        lr=0.01,
+        lr=0.05,
         # lr=0.1,
         lr_drop_steps=0,
         lr_drop_factor=0.2,
         model_name=model_name,
         batch_size=batch_size,
-        epochs=min(MAX_EPOCHS, _num_epochs(num_train)),
-        # epochs=100,
-        eval_epochs=2,
+        # epochs=min(MAX_EPOCHS, _num_epochs(num_train)),
+        epochs=80,
+        eval_epochs=5,
         summary_steps=100000,
         chkpnt_steps=100000,
         save_dir=save_dir,  # "/home/ubuntu/out2/",
         plot='',
-        logging_steps=1,
+        logging_steps=5,
         gpus=str(gpu),
         preds_path='predictions.npz',  # save the predictions into `predictions.npz`
         num_components=1,
@@ -442,9 +442,18 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train, g
         iso=False,
         num_samples_pred=2000,
         s_as_input=s_as_input,
-        num_inducing=MAX_NUM_INDUCING,
-        # num_inducing=10,
+        # num_inducing=MAX_NUM_INDUCING,
+        num_inducing=_num_inducing(num_train),
     ), **parameters}
+
+
+def _num_inducing(num_train):
+    """Adaptive number of inducing inputs
+
+    num_train == 4,000 => num_inducing == 1121
+    num_train == 20,000 => num_inducing == 2507
+    """
+    return int(2500 / 141 * np.sqrt(num_train))
 
 
 def _num_epochs(num_train):
