@@ -13,7 +13,7 @@ GPYT_PATH = "/home/ubuntu/code/fair-gpytorch/run.py"
 PYTHON_EXE = "/home/ubuntu/anaconda3/envs/pytorch_p36/bin/python"
 MAX_EPOCHS = 10000
 MAX_BATCH_SIZE = 10000  # can go up to 10000
-MAX_NUM_INDUCING = 2500  # 2500 seems to be more than enough
+MAX_NUM_INDUCING = 5000  # 2500 seems to be more than enough
 
 
 class GPyT(Algorithm):
@@ -421,8 +421,8 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train, g
         lr_drop_factor=0.2,
         model_name=model_name,
         batch_size=batch_size,
-        # epochs=min(MAX_EPOCHS, _num_epochs(num_train)),
-        epochs=80,
+        epochs=min(MAX_EPOCHS, _num_epochs(num_train)),
+        # epochs=80,
         eval_epochs=5,
         summary_steps=100000,
         chkpnt_steps=100000,
@@ -442,26 +442,14 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train, g
         iso=False,
         num_samples_pred=2000,
         s_as_input=s_as_input,
-        # num_inducing=MAX_NUM_INDUCING,
-        num_inducing=_num_inducing(num_train),
+        num_inducing=MAX_NUM_INDUCING,
     ), **parameters}
-
-
-def _num_inducing(num_train):
-    """Adaptive number of inducing inputs
-
-    num_train == 4,000 => num_inducing == 1121
-    num_train == 20,000 => num_inducing == 2507
-    """
-    return int(2500 / 141 * np.sqrt(num_train))
 
 
 def _num_epochs(num_train):
     """Adaptive number of epochs
 
-    num_train == 100 => num_epochs == 700
-    num_train == 10,000 => num_epochs == 70
-    num_train == 49,000,000 => num_epochs == 1
+    num_train == 4,000 => num_epochs == 125.7
+    num_train == 20,000 => num_epochs == 84
     """
-    # return int(7000 / np.sqrt(num_train))
-    return int(2500 / np.sqrt(num_train))
+    return int(1000 / np.power(num_train, 1 / 4))
