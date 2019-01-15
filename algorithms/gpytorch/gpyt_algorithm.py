@@ -14,6 +14,7 @@ PYTHON_EXE = "/home/ubuntu/anaconda3/envs/pytorch_p36/bin/python"
 MAX_EPOCHS = 1000
 MAX_BATCH_SIZE = 10100  # can go up to 10000
 MAX_NUM_INDUCING = 5000  # 2500 seems to be more than enough
+SEED = 1234
 
 
 class GPyT(Algorithm):
@@ -438,6 +439,7 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train, g
         num_samples_pred=2000,
         s_as_input=s_as_input,
         num_inducing=MAX_NUM_INDUCING,
+        manual_seed=SEED,
     ), **parameters}
 
 
