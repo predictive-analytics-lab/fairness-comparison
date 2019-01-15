@@ -14,6 +14,7 @@ from algorithms.universalgp.ULRAlgorithm import ulr, ulr_dem_par, ulr_eq_opp
 from algorithms.gpytorch.gpyt_algorithm import GPyT, GPyTDemPar, GPyTEqOdds
 
 from metrics.DIBinary import DIBinary
+from metrics.tpr_norm_diff import TPRNormDiff, TNRNormDiff
 from metrics.Accuracy import Accuracy
 from metrics.MCC import MCC
 
