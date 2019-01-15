@@ -421,8 +421,8 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train, g
         # lr=0.1,
         model_name=model_name,
         batch_size=batch_size,
-        epochs=min(MAX_EPOCHS, _num_epochs(num_train)),
-        # epochs=80,
+        # epochs=min(MAX_EPOCHS, _num_epochs(num_train)),
+        epochs=70,
         eval_epochs=5,
         summary_steps=100000,
         chkpt_epochs=100000,
@@ -438,11 +438,21 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train, g
         iso=False,
         num_samples_pred=2000,
         s_as_input=s_as_input,
-        num_inducing=MAX_NUM_INDUCING,
+        # num_inducing=MAX_NUM_INDUCING,
+        num_inducing=_num_inducing(num_train),
         manual_seed=SEED,
         metrics=("binary_accuracy,pred_rate_y1_s0,pred_rate_y1_s1,base_rate_y1_s0,base_rate_y1_s1,"
                  "pred_odds_yhaty1_s0,pred_odds_yhaty1_s1,pred_odds_yhaty0_s0,pred_odds_yhaty0_s1")
     ), **parameters}
+
+
+def _num_inducing(num_train):
+    """Adaptive number of inducing inputs
+
+    num_train == 4,000 => num_inducing == 1121
+    num_train == 20,000 => num_inducing == 2507
+    """
+    return int(2500 / 141 * np.sqrt(num_train))
 
 
 def _num_epochs(num_train):
