@@ -13,7 +13,7 @@ GPYT_PATH = "/home/ubuntu/code/fair-gpytorch/run.py"
 PYTHON_EXE = "/home/ubuntu/anaconda3/envs/pytorch_p36/bin/python -u"
 MAX_EPOCHS = 1000
 MAX_BATCH_SIZE = 10100  # can go up to 10000
-MAX_NUM_INDUCING = 5000  # 2500 seems to be more than enough
+MAX_NUM_INDUCING = 500  # 2500 seems to be more than enough
 SEED = 1234
 
 
@@ -461,7 +461,7 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train, g
         model_name=model_name,
         batch_size=batch_size,
         # epochs=min(MAX_EPOCHS, _num_epochs(num_train)),
-        epochs=70,
+        epochs=80,
         eval_epochs=5,
         summary_steps=100000,
         chkpt_epochs=100000,
@@ -477,8 +477,8 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train, g
         iso=False,
         num_samples_pred=2000,
         s_as_input=s_as_input,
-        # num_inducing=MAX_NUM_INDUCING,
-        num_inducing=_num_inducing(num_train),
+        num_inducing=MAX_NUM_INDUCING,
+        # num_inducing=_num_inducing(num_train),
         manual_seed=SEED,
         metrics=("binary_accuracy,pred_rate_y1_s0,pred_rate_y1_s1,base_rate_y1_s0,base_rate_y1_s1,"
                  "pred_odds_yhaty1_s0,pred_odds_yhaty1_s1,pred_odds_yhaty0_s0,pred_odds_yhaty0_s1")
