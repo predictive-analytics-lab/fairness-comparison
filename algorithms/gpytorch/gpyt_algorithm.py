@@ -11,8 +11,8 @@ from ..Algorithm import Algorithm
 GPYT_PATH = "/home/ubuntu/code/fair-gpytorch/run.py"
 # PYTHON_EXE = "/home/ubuntu/anaconda3/envs/pytorch_p36/bin/python -m pdb -c continue"
 PYTHON_EXE = "/home/ubuntu/anaconda3/envs/pytorch_p36/bin/python"
-MAX_EPOCHS = 10000
-MAX_BATCH_SIZE = 10000  # can go up to 10000
+MAX_EPOCHS = 1000
+MAX_BATCH_SIZE = 10100  # can go up to 10000
 MAX_NUM_INDUCING = 5000  # 2500 seems to be more than enough
 
 
@@ -54,7 +54,7 @@ class GPyT(Algorithm):
         """
         self.counter += 1
         # Separate the data and make sure the labels are either 0 or 1
-        raw_data, label_converter, gpu = _prepare_data(*data)
+        raw_data, label_converter, gpu = prepare_data(*data)
 
         # Set algorithm dependent parameters
         parameters = self._additional_parameters(raw_data)
@@ -194,7 +194,7 @@ class GPyTDemPar(GPyT):
             target_rate = self.target_acceptance
 
         if self.marginal:
-            p_s = _prior_s(raw_data['strain'])
+            p_s = prior_s(raw_data['strain'])
         else:
             p_s = [0.5] * 2
 
@@ -251,7 +251,7 @@ class GPyTEqOdds(GPyT):
         biased_acceptance = compute_bias(raw_data['ytrain'], raw_data['strain'])
 
         if self.marginal:
-            p_s = _prior_s(raw_data['strain'])
+            p_s = prior_s(raw_data['strain'])
         else:
             p_s = [0.5] * 2
 
@@ -270,7 +270,7 @@ class GPyTEqOdds(GPyT):
 
     def run(self, *data):
         self.counter += 1
-        raw_data, label_converter, gpu = _prepare_data(*data)
+        raw_data, label_converter, gpu = prepare_data(*data)
 
         parameters = self._additional_parameters(raw_data)
 
@@ -283,7 +283,7 @@ class GPyTEqOdds(GPyT):
 
             if self.odds is None:
                 # Split the training data into train and dev and save it to `data.npz`
-                train_dev_data = _split_train_dev(
+                train_dev_data = split_train_dev(
                     raw_data['xtrain'], raw_data['ytrain'], raw_data['strain'])
                 np.savez(data_path, **train_dev_data)
 
@@ -293,7 +293,7 @@ class GPyTEqOdds(GPyT):
                 # Read the results from the numpy file 'predictions.npz'
                 prediction_on_train = np.load(tmp_path / Path(model_name) / Path("predictions.npz"))
                 preds = (prediction_on_train['pred_mean'] > 0.5).astype(int)
-                odds = _compute_odds(train_dev_data['ytest'], preds, train_dev_data['stest'])
+                odds = compute_odds(train_dev_data['ytest'], preds, train_dev_data['stest'])
 
                 # Enforce equality of opportunity
                 opportunity = min(odds['p_ybary1_s0'], odds['p_ybary1_s1'])
@@ -317,8 +317,8 @@ class GPyTEqOdds(GPyT):
         return label_converter((pred_mean > 0.5).astype(raw_data['ytest'].dtype)[:, 0]), []
 
 
-def _prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
-                  single_sensitive, privileged_vals, params):
+def prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
+                 single_sensitive, privileged_vals, params):
     # Separate data
     sensitive = [df[single_sensitive].values[:, np.newaxis] for df in [train_df, test_df]]
     label = [df[class_attr].values[:, np.newaxis] for df in [train_df, test_df]]
@@ -329,12 +329,12 @@ def _prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_a
     assert list(np.unique(sensitive[0])) == [0, 1] or list(np.unique(sensitive[0])) == [0., 1.]
 
     # Check labels
-    label, label_converter = fix_labels(label, positive_class_val)
+    label, label_converter = _fix_labels(label, positive_class_val)
     return dict(xtrain=nosensitive[0], xtest=nosensitive[1], ytrain=label[0], ytest=label[1],
                 strain=sensitive[0], stest=sensitive[1]), label_converter, params.get('gpu', 0)
 
 
-def _prior_s(sensitive):
+def prior_s(sensitive):
     """Compute the bias in the labels with respect to the sensitive attributes"""
     return np.sum(sensitive == 0) / len(sensitive), np.sum(sensitive == 1) / len(sensitive)
 
@@ -346,7 +346,7 @@ def compute_bias(labels, sensitive):
     return rate_y1_s0, rate_y1_s1
 
 
-def _compute_odds(labels, predictions, sensitive):
+def compute_odds(labels, predictions, sensitive):
     """Compute the bias in the predictions with respect to the sensitive attr. and the labels"""
     return dict(
         p_ybary0_s0=np.mean(predictions[np.logical_and(labels == 0, sensitive == 0)] == 0),
@@ -356,7 +356,7 @@ def _compute_odds(labels, predictions, sensitive):
     )
 
 
-def fix_labels(labels, positive_class_val):
+def _fix_labels(labels, positive_class_val):
     """Make sure that labels are either 0 or 1
 
     Args"
@@ -380,7 +380,7 @@ def fix_labels(labels, positive_class_val):
     raise ValueError("Labels have unknown structure")
 
 
-def _split_train_dev(inputs, labels, sensitive):
+def split_train_dev(inputs, labels, sensitive):
     n = inputs.shape[0]
     idx_s0_y0 = np.where((sensitive == 0) & (labels == 0))[0]
     idx_s0_y1 = np.where((sensitive == 0) & (labels == 1))[0]
@@ -414,29 +414,24 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train, g
         data='sensitive_from_numpy',
         dataset_path=data_path,
         cov='RBFKernel',
+        mean='ZeroMean',
         optimizer="Adam",
         lr=0.05,
         # lr=0.1,
-        lr_drop_steps=0,
-        lr_drop_factor=0.2,
         model_name=model_name,
         batch_size=batch_size,
         epochs=min(MAX_EPOCHS, _num_epochs(num_train)),
         # epochs=80,
         eval_epochs=5,
         summary_steps=100000,
-        chkpnt_steps=100000,
+        chkpt_epochs=100000,
         save_dir=save_dir,  # "/home/ubuntu/out2/",
         plot='',
         logging_steps=5,
         gpus=str(gpu),
         preds_path='predictions.npz',  # save the predictions into `predictions.npz`
-        num_components=1,
         num_samples=1000,
-        diag_post=False,
         optimize_inducing=True,
-        use_loo=False,
-        loo_steps=0,
         length_scale=1.2,
         sf=1.0,
         iso=False,
