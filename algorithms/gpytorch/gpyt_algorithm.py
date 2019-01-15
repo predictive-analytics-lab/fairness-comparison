@@ -10,7 +10,7 @@ from ..Algorithm import Algorithm
 # TODO: find a better way to specify the path
 GPYT_PATH = "/home/ubuntu/code/fair-gpytorch/run.py"
 # PYTHON_EXE = "/home/ubuntu/anaconda3/envs/pytorch_p36/bin/python -m pdb -c continue"
-PYTHON_EXE = "/home/ubuntu/anaconda3/envs/pytorch_p36/bin/python"
+PYTHON_EXE = "/home/ubuntu/anaconda3/envs/pytorch_p36/bin/python -u"
 MAX_EPOCHS = 1000
 MAX_BATCH_SIZE = 10100  # can go up to 10000
 MAX_NUM_INDUCING = 5000  # 2500 seems to be more than enough
@@ -428,7 +428,7 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train, g
         chkpt_epochs=100000,
         save_dir=save_dir,  # "/home/ubuntu/out2/",
         plot='',
-        logging_steps=5,
+        logging_steps=1,
         gpus=str(gpu),
         preds_path='predictions.npz',  # save the predictions into `predictions.npz`
         num_samples=1000,
@@ -440,6 +440,8 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train, g
         s_as_input=s_as_input,
         num_inducing=MAX_NUM_INDUCING,
         manual_seed=SEED,
+        metrics=("binary_accuracy,pred_rate_y1_s0,pred_rate_y1_s1,base_rate_y1_s0,base_rate_y1_s1,"
+                 "pred_odds_yhaty1_s0,pred_odds_yhaty1_s1,pred_odds_yhaty0_s0,pred_odds_yhaty0_s1")
     ), **parameters}
 
 
