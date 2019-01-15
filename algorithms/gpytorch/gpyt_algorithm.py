@@ -1,5 +1,4 @@
 """Code for calling UniversalGP"""
-import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from subprocess import call
@@ -7,22 +6,21 @@ import json
 import numpy as np
 
 from ..Algorithm import Algorithm
-from ..gpytorch.gpyt_algorithm import (compute_bias, prepare_data, prior_s, compute_odds,
-                                       split_train_dev)
 
 # TODO: find a better way to specify the path
-UGP_PATH = "/home/ubuntu/code/UniversalGP/gaussian_process.py"
-USE_EAGER = False
-MAX_TRAIN_STEPS = 10000
-MAX_BATCH_SIZE = 10000
+GPYT_PATH = "/home/ubuntu/code/fair-gpytorch/run.py"
+# PYTHON_EXE = "/home/ubuntu/anaconda3/envs/pytorch_p36/bin/python -m pdb -c continue"
+PYTHON_EXE = "/home/ubuntu/anaconda3/envs/pytorch_p36/bin/python"
+MAX_EPOCHS = 1000
+MAX_BATCH_SIZE = 10100  # can go up to 10000
 MAX_NUM_INDUCING = 5000  # 2500 seems to be more than enough
 
 
-class UGP(Algorithm):
+class GPyT(Algorithm):
     """
     This class calls the UniversalGP code
     """
-    basename = "UGP"
+    basename = "GPyT"
 
     def __init__(self, s_as_input=True):
         super().__init__()
@@ -70,8 +68,8 @@ class UGP(Algorithm):
 
             # Construct and execute command
             model_name = "local"  # f"run{self.counter}_s_as_input_{self.s_as_input}"
-            self.run_ugp(_flags(parameters, str(data_path), tmpdir, self.s_as_input, model_name,
-                                raw_data['ytrain'].shape[0], gpu))
+            self.run_gpyt(_flags(parameters, str(data_path), tmpdir, self.s_as_input, model_name,
+                                 raw_data['ytrain'].shape[0], gpu))
 
             # Read the results from the numpy file 'predictions.npz'
             with (tmp_path / model_name / "predictions.npz").open('rb') as f:
@@ -82,9 +80,9 @@ class UGP(Algorithm):
         return label_converter((pred_mean > 0.5).astype(raw_data['ytest'].dtype)[:, 0]), []
 
     @staticmethod
-    def run_ugp(flags):
+    def run_gpyt(flags):
         """Run UniversalGP as a separte process"""
-        cmd = f"python {UGP_PATH} "
+        cmd = f"{PYTHON_EXE} {GPYT_PATH} "
         for key, value in flags.items():
             if isinstance(value, str):
                 cmd += f" --{key}=\"{value}\""
@@ -123,9 +121,10 @@ class UGP(Algorithm):
         """
         return {}
 
-    def _additional_parameters(self, _):
+    @staticmethod
+    def _additional_parameters(_):
         return dict(
-            inf='VariationalWithS',
+            lik='BaselineLikelihood',
         )
 
     def _save_in_json(self, save_path):
@@ -135,7 +134,7 @@ class UGP(Algorithm):
             json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-class UGPDemPar(UGP):
+class GPyTDemPar(GPyT):
     """GP algorithm which enforces demographic parity"""
     MEAN = 2
     MIN = 3
@@ -200,7 +199,7 @@ class UGPDemPar(UGP):
             p_s = [0.5] * 2
 
         return dict(
-            inf='VariationalYbar',
+            lik='TunePrLikelihood',
             target_rate1=target_rate[0] if isinstance(target_rate, tuple) else target_rate,
             target_rate2=target_rate[1] if isinstance(target_rate, tuple) else target_rate,
             biased_acceptance1=biased_acceptance[0],
@@ -214,7 +213,7 @@ class UGPDemPar(UGP):
         )
 
 
-class UGPEqOpp(UGP):
+class GPyTEqOdds(GPyT):
     """GP algorithm which enforces equality of opportunity"""
     def __init__(self, s_as_input=True, average_prediction=False, tpr=None, marginal=False,
                  tnr0=None, tnr1=None, tpr0=None, tpr1=None):
@@ -257,7 +256,7 @@ class UGPEqOpp(UGP):
             p_s = [0.5] * 2
 
         return dict(
-            inf='VariationalYbarEqOdds',
+            lik='TuneTprLikelihood',
             p_ybary0_s0=1.0,
             p_ybary0_s1=1.0,
             p_ybary1_s0=1.0,
@@ -289,7 +288,7 @@ class UGPEqOpp(UGP):
                 np.savez(data_path, **train_dev_data)
 
                 # First run
-                self.run_ugp(flags)
+                self.run_gpyt(flags)
 
                 # Read the results from the numpy file 'predictions.npz'
                 prediction_on_train = np.load(tmp_path / Path(model_name) / Path("predictions.npz"))
@@ -308,7 +307,7 @@ class UGPEqOpp(UGP):
             np.savez(data_path, **raw_data)
 
             # Second run
-            self.run_ugp(flags)
+            self.run_gpyt(flags)
 
             # Read the results from the numpy file 'predictions.npz'
             output = np.load(tmp_path / Path(model_name) / Path("predictions.npz"))
@@ -318,35 +317,122 @@ class UGPEqOpp(UGP):
         return label_converter((pred_mean > 0.5).astype(raw_data['ytest'].dtype)[:, 0]), []
 
 
+def prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
+                 single_sensitive, privileged_vals, params):
+    # Separate data
+    sensitive = [df[single_sensitive].values[:, np.newaxis] for df in [train_df, test_df]]
+    label = [df[class_attr].values[:, np.newaxis] for df in [train_df, test_df]]
+    nosensitive = [df.drop(columns=sensitive_attrs).drop(columns=class_attr).values
+                   for df in [train_df, test_df]]
+
+    # Check sensitive attributes
+    assert list(np.unique(sensitive[0])) == [0, 1] or list(np.unique(sensitive[0])) == [0., 1.]
+
+    # Check labels
+    label, label_converter = _fix_labels(label, positive_class_val)
+    return dict(xtrain=nosensitive[0], xtest=nosensitive[1], ytrain=label[0], ytest=label[1],
+                strain=sensitive[0], stest=sensitive[1]), label_converter, params.get('gpu', 0)
+
+
+def prior_s(sensitive):
+    """Compute the bias in the labels with respect to the sensitive attributes"""
+    return np.sum(sensitive == 0) / len(sensitive), np.sum(sensitive == 1) / len(sensitive)
+
+
+def compute_bias(labels, sensitive):
+    """Compute the bias in the labels with respect to the sensitive attributes"""
+    rate_y1_s0 = np.sum(labels[sensitive == 0] == 1) / np.sum(sensitive == 0)
+    rate_y1_s1 = np.sum(labels[sensitive == 1] == 1) / np.sum(sensitive == 1)
+    return rate_y1_s0, rate_y1_s1
+
+
+def compute_odds(labels, predictions, sensitive):
+    """Compute the bias in the predictions with respect to the sensitive attr. and the labels"""
+    return dict(
+        p_ybary0_s0=np.mean(predictions[np.logical_and(labels == 0, sensitive == 0)] == 0),
+        p_ybary1_s0=np.mean(predictions[np.logical_and(labels == 1, sensitive == 0)] == 1),
+        p_ybary0_s1=np.mean(predictions[np.logical_and(labels == 0, sensitive == 1)] == 0),
+        p_ybary1_s1=np.mean(predictions[np.logical_and(labels == 1, sensitive == 1)] == 1),
+    )
+
+
+def _fix_labels(labels, positive_class_val):
+    """Make sure that labels are either 0 or 1
+
+    Args"
+        labels: the labels as a list of numpy arrays
+        positive_class_val: the value that corresponds to a "positive" predictions
+
+    Returns:
+        the fixed labels and a function to convert the fixed labels back to the original format
+    """
+    label_values = list(np.unique(labels[0]))
+    if label_values == [0, 1] and positive_class_val == 1:
+
+        def _do_nothing(inp):
+            return inp
+        return labels, _do_nothing
+    elif label_values == [1, 2] and positive_class_val == 1:
+
+        def _converter(label):
+            return 2 - label
+        return [2 - y for y in labels], _converter
+    raise ValueError("Labels have unknown structure")
+
+
+def split_train_dev(inputs, labels, sensitive):
+    n = inputs.shape[0]
+    idx_s0_y0 = np.where((sensitive == 0) & (labels == 0))[0]
+    idx_s0_y1 = np.where((sensitive == 0) & (labels == 1))[0]
+    idx_s1_y0 = np.where((sensitive == 1) & (labels == 0))[0]
+    idx_s1_y1 = np.where((sensitive == 1) & (labels == 1))[0]
+
+    train_fraction = []
+    test_fraction = []
+    for a in [idx_s0_y0, idx_s0_y1, idx_s1_y0, idx_s1_y1]:
+        np.random.shuffle(a)
+
+        split_idx = int(len(a) * 0.5) + 1  # make sure the train part is at least half
+        train_fraction_a = a[:split_idx]
+        test_fraction_a = a[split_idx:]
+        train_fraction += list(train_fraction_a)
+        test_fraction += list(test_fraction_a)
+    xtrain, ytrain, strain = (inputs[train_fraction], labels[train_fraction],
+                              sensitive[train_fraction])
+    # ensure that the train set has exactly the same size as the given set
+    # (otherwise inducing inputs has wrong shape)
+    return dict(xtrain=np.concatenate((xtrain, xtrain))[:n],
+                ytrain=np.concatenate((ytrain, ytrain))[:n],
+                strain=np.concatenate((strain, strain))[:n], xtest=inputs[test_fraction],
+                ytest=labels[test_fraction], stest=sensitive[test_fraction])
+
+
 def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train, gpu):
     batch_size = min(MAX_BATCH_SIZE, num_train)
     return {**dict(
-        tf_mode='eager' if USE_EAGER else 'graph',
+        inf='Variational',
         data='sensitive_from_numpy',
         dataset_path=data_path,
-        cov='SquaredExponential',
-        optimizer="AdamOptimizer",
-        lr=0.001,
-        lr_drop_steps=0,
-        lr_drop_factor=0.2,
+        cov='RBFKernel',
+        mean='ZeroMean',
+        optimizer="Adam",
+        lr=0.05,
+        # lr=0.1,
         model_name=model_name,
         batch_size=batch_size,
-        train_steps=min(MAX_TRAIN_STEPS, num_train * _num_epochs(num_train) // batch_size),
-        eval_epochs=20,
+        epochs=min(MAX_EPOCHS, _num_epochs(num_train)),
+        # epochs=80,
+        eval_epochs=5,
         summary_steps=100000,
-        chkpnt_steps=100000,
+        chkpt_epochs=100000,
         save_dir=save_dir,  # "/home/ubuntu/out2/",
         plot='',
         logging_steps=5,
         gpus=str(gpu),
         preds_path='predictions.npz',  # save the predictions into `predictions.npz`
-        num_components=1,
         num_samples=1000,
-        diag_post=False,
         optimize_inducing=True,
-        use_loo=False,
-        loo_steps=0,
-        length_scale=1.0,
+        length_scale=1.2,
         sf=1.0,
         iso=False,
         num_samples_pred=2000,
@@ -358,9 +444,7 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train, g
 def _num_epochs(num_train):
     """Adaptive number of epochs
 
-    num_train == 100 => num_epochs == 700
-    num_train == 10,000 => num_epochs == 70
-    num_train == 49,000,000 => num_epochs == 1
+    num_train == 4,000 => num_epochs == 125.7
+    num_train == 20,000 => num_epochs == 84
     """
-    # return int(7000 / np.sqrt(num_train))
-    return int(2500 / np.sqrt(num_train))
+    return int(1000 / np.power(num_train, 1 / 4))
