@@ -318,6 +318,45 @@ class GPyTEqOdds(GPyT):
         return label_converter((pred_mean > 0.5).astype(raw_data['ytest'].dtype)[:, 0]), []
 
 
+class GPyTCal(GPyT):
+    """GP algorithm which enforces calibration"""
+    def __init__(self, s_as_input=True, average_prediction=False, npv0=1.0, npv1=1.0, ppv0=1.0,
+                 ppv1=1.0):
+        """
+        Args:
+            s_as_input: should the sensitive attribute be part of the input?
+            average_prediction: whether to use to average of all possible sensitive attributes for
+                                predictions
+            npv0: negative predictive value for s=0
+            npv1: negative predictive value for s=1
+            ppv0: positive predictive value for s=0
+            ppv1: positive predictive value for s=1
+        """
+        super().__init__(s_as_input=s_as_input)
+        if s_as_input and average_prediction:
+            self.name = f"{self.basename}_cal_av_True"
+        else:
+            self.name = f"{self.basename}_cal_in_{s_as_input}"
+        for val, name in [(npv0, '0npv'), (npv1, '1npv'),
+                          (ppv0, '0ppv'), (ppv1, '1ppv')]:
+            self.name += f"_{name}_{val}"  # add to name
+        self.average_prediction = average_prediction
+        self.npv0 = npv0
+        self.npv1 = npv1
+        self.ppv0 = ppv0
+        self.ppv1 = ppv1
+
+    def _additional_parameters(self, raw_data):
+        return dict(
+            lik='CalibrationLikelihood',
+            average_prediction=self.average_prediction,
+            p_yybar0_s0=self.npv0,
+            p_yybar0_s1=self.npv1,
+            p_yybar1_s0=self.ppv0,
+            p_yybar1_s1=self.ppv1,
+        )
+
+
 def prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
                  single_sensitive, privileged_vals, params):
     # Separate data
