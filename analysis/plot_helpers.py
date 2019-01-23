@@ -36,6 +36,9 @@ def common_plotting_settings(plot, plot_def, xaxis_title, yaxis_title, legend="i
         return legend
     elif legend == "inside":
         plot.legend()
+    elif isinstance(legend, tuple) and legend[0] == "outside" and type(legend[1]) == float:
+        legend = plot.legend(bbox_to_anchor=(1, legend[1]), loc=2) # , borderaxespad=0.)
+        return legend
 
 
 def scatter(plot, plot_def, xaxis, yaxis, legend="inside", startindex=0, markersize=6):
