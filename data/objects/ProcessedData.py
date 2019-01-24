@@ -21,7 +21,7 @@ class ProcessedData():
     def get_dataframe(self, tag):
         return self.dfs[tag]
 
-    def create_train_test_splits(self, num, sensitive_attr):
+    def create_train_test_splits(self, num, sensitive_attr):  # , npv):
         if self.has_splits:
             return self.splits
 
@@ -65,10 +65,40 @@ class ProcessedData():
 
                 train = df.iloc[train_fraction]
                 test = df.iloc[test_fraction]
+                # test = self._reset_test(test, pos_val, class_attr, sensitive_attr, npv)
                 self.splits[k].append((train, test))
 
         self.has_splits = True
         return self.splits
+
+    def _reset_test(self, df, pos_val, class_attr, sensitive_attr, target_NPV):
+        print(f"target_NPV: {target_NPV}")
+        labels = df[class_attr]
+        sensitive = df[sensitive_attr]
+        idx_s0_y0 = np.where((sensitive == 0) & (labels != pos_val))[0]
+        idx_s0_y1 = np.where((sensitive == 0) & (labels == pos_val))[0]
+        idx_s1_y0 = np.where((sensitive == 1) & (labels != pos_val))[0]
+        idx_s1_y1 = np.where((sensitive == 1) & (labels == pos_val))[0]
+
+        m0 = len(idx_s0_y0) + len(idx_s0_y1)
+        m1 = len(idx_s1_y0) + len(idx_s1_y1)
+
+        if len(idx_s0_y0) > target_NPV * m0:
+            rm_points = (len(idx_s0_y0) - target_NPV * m0) / (1 - target_NPV)
+            idx_s0_y0 = idx_s0_y0[int(round(rm_points)):]
+        else:
+            rm_points = (len(idx_s0_y1) - (1 - target_NPV) * m0) / target_NPV
+            idx_s0_y1 = idx_s0_y1[int(round(rm_points)):]
+
+        if len(idx_s1_y0) > target_NPV * m1:
+            rm_points = (len(idx_s1_y0) - target_NPV * m1) / (1 - target_NPV)
+            idx_s1_y0 = idx_s1_y0[int(round(rm_points)):]
+        else:
+            rm_points = (len(idx_s1_y1) - (1 - target_NPV) * m1) / target_NPV
+            idx_s1_y1 = idx_s1_y1[int(round(rm_points)):]
+
+        index = np.concatenate([idx_s0_y0, idx_s0_y1, idx_s1_y0, idx_s1_y1])
+        return df.iloc[list(index)]
 
     def get_sensitive_values(self, tag):
         """
