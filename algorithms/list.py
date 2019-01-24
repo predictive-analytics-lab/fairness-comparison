@@ -11,7 +11,7 @@ from algorithms.ParamGridSearch import ParamGridSearch
 from algorithms.FairGridSearch import FairGridSearch
 from algorithms.universalgp.UGPAlgorithm import UGP, UGPDemPar, UGPEqOpp
 from algorithms.universalgp.ULRAlgorithm import ulr, ulr_dem_par, ulr_eq_opp
-from algorithms.gpytorch.gpyt_algorithm import GPyT, GPyTDemPar, GPyTEqOdds
+from algorithms.gpytorch.gpyt_algorithm import GPyT, GPyTDemPar, GPyTEqOdds, GPyTCal
 
 from metrics.DIBinary import DIBinary
 from metrics.tpr_norm_diff import TPRNormDiff, TNRNormDiff
@@ -58,6 +58,30 @@ algos1 = []
 #     algos1.append(FairGridSearch(ulr_eq_opp(s_as_input=False, use_bias=True, tpr0=tpr_rate,
 #                                             tpr1=tpr_rate, tnr1=0.750231, tnr0=0.750231),
 #                                  Accuracy(), DIBinary(), 5))
+
+# for tnr0 in [0.75]:  # [0.6, 0.7, 0.8, 0.9, 1.0]:
+#     for tnr1 in [0.75]:  # [0.6, 0.7, 0.8, 0.9, 1.0]:
+# for tpr in [0.6, 0.7, 0.8, 0.9, 1.0]:
+#     tnr_in_true_race = 0.71
+#     tnr_in_false_race = 0.74
+#     tnr_in_true_sex = 0.72
+#     tnr_in_false_sex = 0.77
+#     algos1 += [GPyTEqOdds(s_as_input=True, tnr0=tnr_in_true_race, tnr1=tnr_in_true_race,
+#                           tpr0=tpr, tpr1=tpr)]
+#     algos1 += [GPyTEqOdds(s_as_input=False, tnr0=tnr_in_false_race, tnr1=tnr_in_false_race,
+#                           tpr0=tpr, tpr1=tpr)]
+#     algos1 += [GPyTEqOdds(s_as_input=True, tnr0=tnr_in_true_sex, tnr1=tnr_in_true_sex,
+#                           tpr0=tpr, tpr1=tpr)]
+#     algos1 += [GPyTEqOdds(s_as_input=False, tnr0=tnr_in_false_sex, tnr1=tnr_in_false_sex,
+#                           tpr0=tpr, tpr1=tpr)]
+
+# for pr in [.1, .2, .3, .4, .5]:
+#     algos1 += [GPyTDemPar(s_as_input=True, target_acceptance=pr)]
+#     algos1 += [GPyTDemPar(s_as_input=False, target_acceptance=pr)]
+
+# for npv in [.1]:
+#     algos1 += [GPyTCal(s_as_input=True, ppv0=0.75, ppv1=0.73, npv0=npv, npv1=npv)]
+#     algos1 += [GPyTCal(s_as_input=False, ppv0=0.75, ppv1=0.73, npv0=npv, npv1=npv)]
 
 
 ALGORITHMS = [
