@@ -1,3 +1,12 @@
+**Update:** this is a modified [fork of another project](https://github.com/algofairness/fairness-comparison). We realised that the changes were making were no longer compatible with the underlying project so we moved the work we'd been doing to a new project, [EthicML](https://github.com/predictive-analytics-lab/EthicML). We're leaving this modified fork available, but like the underlying project, it's not maintained. For an up to date algorithmic fairness comparison library, please use [EthicML](https://github.com/predictive-analytics-lab/EthicML).
+
+https://github.com/predictive-analytics-lab/EthicML
+
+## TL;DR
+This project has moved to [EthicML](https://github.com/predictive-analytics-lab/EthicML)
+
+---
+
 This repository is meant to facilitate the benchmarking of fairness aware machine learning algorithms.
 
 The associated paper is:
